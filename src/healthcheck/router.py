@@ -1,10 +1,9 @@
-from typing import Dict
-
 from fastapi import APIRouter
+from src.schemas.healthcheck import HealthCheckResponse
 
-router = APIRouter(tags=['Health'])
+router = APIRouter(tags=["Health"])
 
 
-@router.get('/healthcheck')
-async def healthcheck() -> Dict[str, str]:
-    return {'status': 'ok'}
+@router.get("/healthcheck", response_model=HealthCheckResponse)
+async def healthcheck() -> HealthCheckResponse:
+    return HealthCheckResponse(status="ok")

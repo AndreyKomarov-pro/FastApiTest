@@ -2,13 +2,17 @@ from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 from src.models.order import OrderStatus
-from src.schemas.order_item import OrderItemResponse, OrderItemCreate
-from src.schemas.user import UserResponse
+from src.schemas.order_item import OrderItemCreate, OrderItemResponse
+from src.schemas.user import UserCreate, UserResponse
 
 
 class OrderCreate(BaseModel):
-    user_id: UUID
-    items: list[OrderItemCreate]
+    user: UserCreate
+    items: list[OrderItemCreate] = []
+
+
+class OrderUpdate(BaseModel):
+    status: OrderStatus | None = None
 
 
 class OrderResponse(BaseModel):
@@ -20,5 +24,4 @@ class OrderResponse(BaseModel):
     user: UserResponse
     items: list[OrderItemResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

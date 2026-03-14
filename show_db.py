@@ -1,4 +1,9 @@
 import asyncio
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from sqlalchemy import select
 from src.database import SessionFactory
 from src.models import UserModel, CategoryModel, ProductModel, OrderModel, OrderItemModel, CartModel
@@ -40,7 +45,5 @@ async def show_all():
 
 asyncio.run(show_all())
 
-
 # ЗАПУСК:
-# python show_db
-# docker compose exec app python show_db.py    в PowerShelL
+# docker compose exec app python show_db.py

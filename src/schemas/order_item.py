@@ -1,11 +1,15 @@
 from pydantic import BaseModel
 from uuid import UUID
-from src.schemas.product import ProductResponse
+from src.schemas.product import ProductCreate, ProductResponse
 
 
 class OrderItemCreate(BaseModel):
-    product_id: UUID
+    product: ProductCreate
     quantity: int = 1
+
+
+class OrderItemUpdate(BaseModel):
+    quantity: int | None = None
 
 
 class OrderItemResponse(BaseModel):
@@ -14,5 +18,4 @@ class OrderItemResponse(BaseModel):
     price: float
     product: ProductResponse
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

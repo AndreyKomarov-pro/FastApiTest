@@ -1,12 +1,12 @@
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
-from src.schemas.user import UserResponse
+from src.schemas.user import UserCreate, UserResponse
 from src.schemas.product import ProductResponse
 
 
 class CartCreate(BaseModel):
-    user_id: UUID
+    user: UserCreate
 
 
 class CartResponse(BaseModel):
@@ -16,5 +16,4 @@ class CartResponse(BaseModel):
     user: UserResponse
     products: list[ProductResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

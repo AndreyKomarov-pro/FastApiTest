@@ -26,7 +26,6 @@ class CartModel(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    # связи
     user: Mapped["UserModel"] = relationship(back_populates="cart")
 
     products: Mapped[list["ProductModel"]] = relationship(

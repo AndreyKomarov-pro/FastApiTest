@@ -13,8 +13,7 @@ class OrderItemModel(Base):
     order_id: Mapped[UUID] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
     product_id: Mapped[UUID] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
     quantity: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
-    price: Mapped[float] = mapped_column(sa.Numeric(10, 2), nullable=False)  # цена на момент заказа
+    price: Mapped[float] = mapped_column(sa.Numeric(10, 2), nullable=False)
 
-    # Связи
     order: Mapped["OrderModel"] = relationship(back_populates="items")
     product: Mapped["ProductModel"] = relationship()

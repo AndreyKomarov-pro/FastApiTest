@@ -2,15 +2,18 @@ from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 
-class UserBase(BaseModel):
+
+class UserCreate(BaseModel):
     username: str
 
-class UserCreate(UserBase):
-    pass
 
-class UserResponse(UserBase):
+class UserUpdate(BaseModel):
+    username: str | None = None
+
+
+class UserResponse(BaseModel):
     id: UUID
-    created_at: datetime | None = None
+    username: str
+    created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

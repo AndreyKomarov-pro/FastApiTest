@@ -15,7 +15,6 @@ class UserModel(Base):
         default=lambda: datetime.now(timezone.utc)
     )
 
-    # Связи
     orders: Mapped[list["OrderModel"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan"
