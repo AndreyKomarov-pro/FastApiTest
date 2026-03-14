@@ -20,7 +20,7 @@ class OrderResponse(BaseModel):
     status: OrderStatus
     total_amount: float
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None
     user: UserResponse
     items: list[OrderItemResponse] = []
 

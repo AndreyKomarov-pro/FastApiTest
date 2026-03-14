@@ -20,9 +20,10 @@ class CartModel(Base):
         sa.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
     )
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime | None] = mapped_column(
         sa.DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        nullable=True,
+        default=None,
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
