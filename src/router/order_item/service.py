@@ -1,15 +1,24 @@
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
 from src.models import OrderItemModel, ProductModel, CategoryModel
 from src.schemas.order_item import OrderItemCreate, OrderItemUpdate
 from src.exceptions import NotFoundException
 from src.router.order_item.repository import OrderItemRepository
+from src.database import get_session
 
 
 class OrderItemService:
-    def __init__(self, session: AsyncSession):
-        self.repo = OrderItemRepository(session)
-        self.session = session
+    def __init__(self):
+        self._session = None
+        self.repo = None
+
+    async def __aenter__(self):
+        self._ctx = get_session()
+        self._session = await self._ctx.__aenter__()
+        self.repo = OrderItemRepository(self._session)
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self._ctx.__aexit__(exc_type, exc_val, exc_tb)
 
     async def create(self, order_id: UUID, data: OrderItemCreate) -> OrderItemModel:
         order = await self.repo.get_order(order_id)
@@ -20,8 +29,8 @@ class OrderItemService:
             name=data.product.category.name,
             description=data.product.category.description,
         )
-        self.session.add(category)
-        await self.session.flush()
+        self._session.add(category)
+        await self._session.flush()
 
         product = ProductModel(
             name=data.product.name,
@@ -30,8 +39,8 @@ class OrderItemService:
             quantity=data.product.quantity,
             category_id=category.id,
         )
-        self.session.add(product)
-        await self.session.flush()
+        self._session.add(product)
+        await self._session.flush()
 
         item = await self.repo.create(
             order_id=order_id,

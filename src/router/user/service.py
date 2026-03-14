@@ -1,14 +1,24 @@
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
 from src.models import UserModel
 from src.schemas.user import UserCreate, UserUpdate
 from src.exceptions import NotFoundException
 from src.router.user.repository import UserRepository
+from src.database import get_session
 
 
 class UserService:
-    def __init__(self, session: AsyncSession):
-        self.repo = UserRepository(session)
+    def __init__(self):
+        self._session = None
+        self.repo = None
+
+    async def __aenter__(self):
+        self._ctx = get_session()
+        self._session = await self._ctx.__aenter__()
+        self.repo = UserRepository(self._session)
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self._ctx.__aexit__(exc_type, exc_val, exc_tb)
 
     async def create(self, data: UserCreate) -> UserModel:
         return await self.repo.create(username=data.username)
