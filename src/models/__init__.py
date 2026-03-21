@@ -8,12 +8,13 @@ from .cart import CartModel
 from .cart_product import cart_products
 
 
-__all__ = [ "Base",
-            "UserModel",
-            "CategoryModel",
-            "ProductModel",
-            "OrderModel",
-            "OrderItemModel",
-            "CartModel",
-            "cart_products",
-            ]
+__all__ = [
+    "Base",
+    "UserModel",
+    "CategoryModel",
+    "ProductModel",
+    "OrderModel",
+    "OrderItemModel",
+    "CartModel",
+    "cart_products",
+]

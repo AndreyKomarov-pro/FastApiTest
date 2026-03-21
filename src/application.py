@@ -2,12 +2,10 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from src.healthcheck.router import router as healthcheck_router
-from src.router.category.router import router as category_router
-from src.router.user.router import router as user_router
-from src.router.product.router import router as product_router
-from src.router.cart.router import router as cart_router
-from src.router.order.router import router as order_router
-from src.router.order_item.router import router as order_item_router
+from src.router.catalog.router import router as catalog_router
+from src.router.users.router import router as users_router
+from src.router.orders.router import router as orders_router
+from src.middleware import RequestIdMiddleware
 
 
 def get_app() -> FastAPI:
@@ -17,6 +15,7 @@ def get_app() -> FastAPI:
         openapi_url="/openapi.json",
     )
 
+    app.add_middleware(RequestIdMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -26,11 +25,8 @@ def get_app() -> FastAPI:
     )
 
     app.include_router(healthcheck_router)
-    app.include_router(category_router, prefix="/api/v1")
-    app.include_router(user_router, prefix="/api/v1")
-    app.include_router(product_router, prefix="/api/v1")
-    app.include_router(cart_router, prefix="/api/v1")
-    app.include_router(order_router, prefix="/api/v1")
-    app.include_router(order_item_router, prefix="/api/v1")
+    app.include_router(catalog_router, prefix="/api/v1")
+    app.include_router(users_router, prefix="/api/v1")
+    app.include_router(orders_router, prefix="/api/v1")
 
     return app
