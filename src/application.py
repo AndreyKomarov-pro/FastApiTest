@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from src.healthcheck.router import router as healthcheck_router
-from src.router.catalog.router import router as catalog_router
-from src.router.users.router import router as users_router
-from src.router.orders.router import router as orders_router
+from src.routers.healthcheck_router import router as healthcheck_router
+from src.routers.catalog_router import router as catalog_router
+from src.routers.users_router import router as users_router
+from src.routers.orders_router import router as orders_router
 from src.middleware import RequestIdMiddleware
 
 

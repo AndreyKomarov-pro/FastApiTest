@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
-from src.router.orders.schemas import (
+from src.schemas.orders_schemas import (
     OrderCreate, OrderUpdate, OrderResponse,
     OrderItemCreate, OrderItemUpdate, OrderItemResponse,
 )
-from src.router.orders.service import OrdersService
+from src.services.orders_service import OrdersService
 
 router = APIRouter(tags=["Orders"])
 
@@ -16,8 +16,6 @@ router = APIRouter(tags=["Orders"])
 def get_service(session: AsyncSession = Depends(get_db)) -> OrdersService:
     return OrdersService(session)
 
-
-# ── Orders ────────────────────────────────────────────────────────────────────
 
 @router.post("/orders/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(
@@ -54,8 +52,6 @@ async def delete_order(
 ) -> None:
     await service.delete_order(order_id)
 
-
-# ── Order Items ───────────────────────────────────────────────────────────────
 
 @router.post(
     "/orders/{order_id}/items",

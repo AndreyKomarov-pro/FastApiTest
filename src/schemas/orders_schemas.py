@@ -4,12 +4,14 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from src.models.order import OrderStatus
-from src.router.catalog.schemas import ProductResponse
-from src.router.users.schemas import UserResponse
+from src.enums.order_status import OrderStatus
+from src.schemas.catalog_schemas import ProductResponse
+from src.schemas.users_schemas import UserResponse
 
 
-# ── Order Item ────────────────────────────────────────────────────────────────
+class OrderItemProductRef(BaseModel):
+    product_id: UUID
+
 
 class OrderItemCreate(BaseModel):
     product_id: UUID
@@ -17,8 +19,8 @@ class OrderItemCreate(BaseModel):
 
 
 class OrderItemUpdate(BaseModel):
-    product_id: UUID | None = None
     quantity: int | None = Field(default=None, ge=1)
+    product: OrderItemProductRef | None = None
 
 
 class OrderItemResponse(BaseModel):
@@ -29,8 +31,6 @@ class OrderItemResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
-
-# ── Order ─────────────────────────────────────────────────────────────────────
 
 class OrderCreate(BaseModel):
     user_id: UUID

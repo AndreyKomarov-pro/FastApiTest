@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
-from src.router.users.schemas import (
+from src.schemas.users_schemas import (
     UserCreate, UserUpdate, UserResponse,
     CartCreate, CartResponse,
 )
-from src.router.users.service import UsersService
+from src.services.users_service import UsersService
 
 router = APIRouter(tags=["Users"])
 
@@ -16,8 +16,6 @@ router = APIRouter(tags=["Users"])
 def get_service(session: AsyncSession = Depends(get_db)) -> UsersService:
     return UsersService(session)
 
-
-# ── Users ─────────────────────────────────────────────────────────────────────
 
 @router.post("/users/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
@@ -54,8 +52,6 @@ async def delete_user(
 ) -> None:
     await service.delete_user(user_id)
 
-
-# ── Carts ─────────────────────────────────────────────────────────────────────
 
 @router.post("/carts/", response_model=CartResponse, status_code=status.HTTP_201_CREATED)
 async def create_cart(

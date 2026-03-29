@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Mapped, relationship
 
-from src.models.base import Base, UUIDMixin, CreatedAtMixin
+from src.models.base import Base
 
 
-class UserModel(UUIDMixin, CreatedAtMixin, Base):
+class UserModel(Base):
     __tablename__ = 'users'
 
     username: Mapped[str]

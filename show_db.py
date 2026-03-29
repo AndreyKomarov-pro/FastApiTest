@@ -44,6 +44,3 @@ async def show_all():
 
 
 asyncio.run(show_all())
-
-# ЗАПУСК:
-# docker compose exec app python show_db.py

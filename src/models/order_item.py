@@ -5,10 +5,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 from uuid import UUID
 
-from src.models.base import Base, UUIDMixin
+from src.models.base import Base
 
 
-class OrderItemModel(UUIDMixin, Base):
+class OrderItemModel(Base):
     __tablename__ = 'order_items'
 
     order_id: Mapped[UUID] = mapped_column(

@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
-from src.router.catalog.schemas import (
+from src.schemas.catalog_schemas import (
     CategoryCreate, CategoryUpdate, CategoryResponse,
     ProductCreate, ProductUpdate, ProductResponse,
 )
-from src.router.catalog.service import CatalogService
+from src.services.catalog_service import CatalogService
 
 router = APIRouter(tags=["Catalog"])
 
@@ -16,8 +16,6 @@ router = APIRouter(tags=["Catalog"])
 def get_service(session: AsyncSession = Depends(get_db)) -> CatalogService:
     return CatalogService(session)
 
-
-# ── Categories ────────────────────────────────────────────────────────────────
 
 @router.post("/categories/", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
 async def create_category(
@@ -54,8 +52,6 @@ async def delete_category(
 ) -> None:
     await service.delete_category(category_id)
 
-
-# ── Products ──────────────────────────────────────────────────────────────────
 
 @router.post("/products/", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product(

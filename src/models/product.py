@@ -6,10 +6,10 @@ from sqlalchemy import ForeignKey
 from uuid import UUID
 
 from src.models.cart_product import cart_products
-from src.models.base import Base, UUIDMixin, CreatedAtMixin
+from src.models.base import Base
 
 
-class ProductModel(UUIDMixin, CreatedAtMixin, Base):
+class ProductModel(Base):
     __tablename__ = 'products'
 
     name: Mapped[str] = mapped_column(sa.String(200), nullable=False)

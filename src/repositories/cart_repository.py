@@ -4,31 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.models import UserModel, CartModel, ProductModel
-from src.router.users.schemas import UserCreate, UserUpdate
-
-
-class UserRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-
-    async def get_by_id(self, user_id: UUID) -> UserModel | None:
-        return await self.session.get(UserModel, user_id)
-
-    async def create(self, data: UserCreate) -> UserModel:
-        user = UserModel(username=data.username)
-        self.session.add(user)
-        await self.session.flush()
-        return user
-
-    async def update(self, user: UserModel, data: UserUpdate) -> UserModel:
-        if data.username is not None:
-            user.username = data.username
-        await self.session.flush()
-        return user
-
-    async def delete(self, user: UserModel) -> None:
-        await self.session.delete(user)
+from src.models import CartModel, ProductModel, cart_products
 
 
 class CartRepository:
@@ -52,11 +28,15 @@ class CartRepository:
         )
         return result.scalar_one_or_none()
 
-    async def create(self, user_id: UUID) -> CartModel:
-        cart = CartModel(user_id=user_id)
+    async def create(self, cart: CartModel) -> CartModel:
         self.session.add(cart)
         await self.session.flush()
         return cart
+
+    async def add_product(self, cart_id: UUID, product_id: UUID) -> None:
+        await self.session.execute(
+            cart_products.insert().values(cart_id=cart_id, product_id=product_id)
+        )
 
     async def delete(self, cart: CartModel) -> None:
         await self.session.delete(cart)

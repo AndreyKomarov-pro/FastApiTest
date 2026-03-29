@@ -1,10 +1,10 @@
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.models.base import Base, UUIDMixin, CreatedAtMixin
+from src.models.base import Base
 
 
-class CategoryModel(UUIDMixin, CreatedAtMixin, Base):
+class CategoryModel(Base):
     __tablename__ = 'categories'
 
     name: Mapped[str] = mapped_column(sa.String(100), nullable=False)

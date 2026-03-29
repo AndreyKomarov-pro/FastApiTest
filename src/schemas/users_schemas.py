@@ -3,10 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from src.router.catalog.schemas import ProductResponse
+from src.schemas.catalog_schemas import ProductResponse
 
-
-# ── User ──────────────────────────────────────────────────────────────────────
 
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=1, max_length=100)
@@ -24,10 +22,9 @@ class UserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ── Cart ──────────────────────────────────────────────────────────────────────
-
 class CartCreate(BaseModel):
     user_id: UUID
+    product_ids: list[UUID] = []
 
 
 class CartResponse(BaseModel):
