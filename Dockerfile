@@ -1,21 +1,24 @@
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+COPY requirements.txt ./
+
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip freeze > requirements.lock
+
 FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
-RUN pip install --upgrade pip
+COPY --from=builder /app/requirements.lock .
 
-RUN pip install poetry
-
-COPY pyproject.toml poetry.lock ./
-
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --no-root
+RUN pip install --no-cache-dir -r requirements.lock
 
 COPY . .
 
-CMD alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000
+USER appuser
+
+CMD ["sh", "-c", "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"]

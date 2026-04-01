@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from src.schemas.catalog_schemas import ProductResponse
+from src.schemas.product_schemas import ProductInCartResponse
 
 
 class UserCreate(BaseModel):
@@ -32,6 +32,6 @@ class CartResponse(BaseModel):
     created_at: datetime
     updated_at: datetime | None
     user: UserResponse
-    products: list[ProductResponse] = []
+    products: list[ProductInCartResponse] = []
 
     model_config = {"from_attributes": True}

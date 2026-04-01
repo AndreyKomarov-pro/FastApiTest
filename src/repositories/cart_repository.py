@@ -17,7 +17,7 @@ class CartRepository:
             .where(CartModel.id == cart_id)
             .options(
                 selectinload(CartModel.user),
-                selectinload(CartModel.products).selectinload(ProductModel.category),
+                selectinload(CartModel.products),
             )
         )
         return result.scalar_one_or_none()
@@ -27,6 +27,9 @@ class CartRepository:
             select(CartModel).where(CartModel.user_id == user_id)
         )
         return result.scalar_one_or_none()
+
+    async def get_product(self, product_id: UUID) -> ProductModel | None:
+        return await self.session.get(ProductModel, product_id)
 
     async def create(self, cart: CartModel) -> CartModel:
         self.session.add(cart)

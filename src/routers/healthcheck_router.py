@@ -1,10 +1,12 @@
+from http import HTTPStatus
+
 from fastapi import APIRouter
 
-from src.schemas.healthcheck_schemas import HealthCheckResponse, HEALTH_STATUS_OK
+from src.schemas.healthcheck_schemas import HealthCheckResponse
 
 router = APIRouter(tags=["Health"])
 
 
 @router.get("/healthcheck", response_model=HealthCheckResponse)
 async def healthcheck() -> HealthCheckResponse:
-    return HealthCheckResponse(status=HEALTH_STATUS_OK)
+    return HealthCheckResponse(status=HTTPStatus.OK.phrase)

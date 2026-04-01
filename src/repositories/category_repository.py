@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import CategoryModel
@@ -11,6 +12,16 @@ class CategoryRepository:
 
     async def get_by_id(self, category_id: UUID) -> CategoryModel | None:
         return await self.session.get(CategoryModel, category_id)
+
+    async def get_all(self, limit: int, offset: int) -> list[CategoryModel]:
+        result = await self.session.execute(
+            select(CategoryModel).order_by(CategoryModel.created_at.desc()).limit(limit).offset(offset).with_for_update(skip_locked=True)
+        )
+        return list(result.scalars().all())
+
+    async def count(self) -> int:
+        result = await self.session.execute(select(func.count()).select_from(CategoryModel))
+        return result.scalar_one()
 
     async def create(self, category: CategoryModel) -> CategoryModel:
         self.session.add(category)

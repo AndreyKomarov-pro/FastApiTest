@@ -8,8 +8,8 @@ from uuid import UUID
 from src.models.base import Base
 
 
-class OrderItemModel(Base):
-    __tablename__ = 'order_items'
+class OrderLineModel(Base):
+    __tablename__ = 'order_lines'
 
     order_id: Mapped[UUID] = mapped_column(
         ForeignKey("orders.id", ondelete="CASCADE"),

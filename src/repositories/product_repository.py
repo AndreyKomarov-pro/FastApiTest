@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -18,6 +18,21 @@ class ProductRepository:
             .options(selectinload(ProductModel.category))
         )
         return result.scalar_one_or_none()
+
+    async def get_all(self, limit: int, offset: int) -> list[ProductModel]:
+        result = await self.session.execute(
+            select(ProductModel)
+            .options(selectinload(ProductModel.category))
+            .order_by(ProductModel.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+            .with_for_update(skip_locked=True)
+        )
+        return list(result.scalars().all())
+
+    async def count(self) -> int:
+        result = await self.session.execute(select(func.count()).select_from(ProductModel))
+        return result.scalar_one()
 
     async def create(self, product: ProductModel) -> ProductModel:
         self.session.add(product)
