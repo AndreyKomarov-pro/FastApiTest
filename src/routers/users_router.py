@@ -60,25 +60,26 @@ async def delete_user(
     await service.delete_user(user_id)
 
 
-@router.post("/carts/", response_model=CartResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/users/{user_id}/cart", response_model=CartResponse, status_code=status.HTTP_201_CREATED)
 async def create_cart(
+    user_id: UUID,
     data: CartCreate,
     service: UsersService = Depends(get_service),
 ) -> CartResponse:
-    return await service.create_cart(data)
+    return await service.create_cart(user_id, data)
 
 
-@router.get("/carts/{cart_id}", response_model=CartResponse)
+@router.get("/users/{user_id}/cart", response_model=CartResponse)
 async def get_cart(
-    cart_id: UUID,
+    user_id: UUID,
     service: UsersService = Depends(get_service),
 ) -> CartResponse:
-    return await service.get_cart_by_id(cart_id)
+    return await service.get_cart(user_id)
 
 
-@router.delete("/carts/{cart_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/users/{user_id}/cart", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_cart(
-    cart_id: UUID,
+    user_id: UUID,
     service: UsersService = Depends(get_service),
 ) -> None:
-    await service.delete_cart(cart_id)
+    await service.delete_cart(user_id)

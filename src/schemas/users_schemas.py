@@ -23,7 +23,6 @@ class UserResponse(BaseModel):
 
 
 class CartCreate(BaseModel):
-    user_id: UUID
     product_ids: list[UUID] = []
 
 

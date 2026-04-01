@@ -47,11 +47,10 @@ async def main():
         print(f"UPDATE: {r.status_code} {r.json()}")
 
         print("\n=== 4. CART ===")
-        r = await client.post("/carts/", json={"user_id": user_id, "product_ids": [product_id]})
+        r = await client.post(f"/users/{user_id}/cart", json={"product_ids": [product_id]})
         print(f"CREATE: {r.status_code} {r.json()}")
-        cart_id = r.json()["id"]
 
-        r = await client.get(f"/carts/{cart_id}")
+        r = await client.get(f"/users/{user_id}/cart")
         print(f"GET:    {r.status_code} {r.json()}")
 
         print("\n=== 5. ORDER ===")
@@ -87,7 +86,7 @@ async def main():
         r = await client.delete(f"/orders/{order_id}")
         print(f"DELETE order:      {r.status_code}")
 
-        r = await client.delete(f"/carts/{cart_id}")
+        r = await client.delete(f"/users/{user_id}/cart")
         print(f"DELETE cart:       {r.status_code}")
 
         r = await client.delete(f"/products/{product_id}")
