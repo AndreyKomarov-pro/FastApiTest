@@ -12,6 +12,14 @@ class OrderItemRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    async def get_by_order_id(self, order_id: UUID) -> list[OrderEntry]:
+        result = await self.session.execute(
+            select(OrderEntry)
+            .where(OrderEntry.order_id == order_id)
+            .options(selectinload(OrderEntry.product))
+        )
+        return list(result.scalars().all())
+
     async def get_by_id(self, item_id: UUID) -> OrderEntry | None:
         result = await self.session.execute(
             select(OrderEntry)

@@ -12,39 +12,29 @@ async def main():
         print(f"CREATE: {r.status_code} {r.json()}")
         category_id = r.json()["id"]
 
-        r = await client.get(f"/categories/{category_id}")
-        print(f"GET:    {r.status_code} {r.json()}")
-
-        r = await client.patch(f"/categories/{category_id}", json={"name": "Electronics Updated"})
-        print(f"UPDATE: {r.status_code} {r.json()}")
+        r = await client.get("/categories/")
+        print(f"LIST:   {r.status_code} total={r.json()['total']}")
 
         print("\n=== 2. PRODUCT ===")
-        r = await client.post("/products/", json={
+        r = await client.post(f"/categories/{category_id}/products", json={
             "name": "Laptop",
             "description": "Good laptop",
             "price": "999.99",
             "quantity": 10,
-            "category_id": category_id,
         })
         print(f"CREATE: {r.status_code} {r.json()}")
         product_id = r.json()["id"]
 
-        r = await client.get(f"/products/{product_id}")
-        print(f"GET:    {r.status_code} {r.json()}")
-
-        r = await client.patch(f"/products/{product_id}", json={"name": "Laptop Pro", "price": "1299.99"})
-        print(f"UPDATE: {r.status_code} {r.json()}")
+        r = await client.get(f"/categories/{category_id}/products")
+        print(f"LIST:   {r.status_code} total={r.json()['total']}")
 
         print("\n=== 3. USER ===")
         r = await client.post("/users/", json={"username": "john_doe"})
         print(f"CREATE: {r.status_code} {r.json()}")
         user_id = r.json()["id"]
 
-        r = await client.get(f"/users/{user_id}")
-        print(f"GET:    {r.status_code} {r.json()}")
-
-        r = await client.patch(f"/users/{user_id}", json={"username": "john_updated"})
-        print(f"UPDATE: {r.status_code} {r.json()}")
+        r = await client.get("/users/")
+        print(f"LIST:   {r.status_code} total={r.json()['total']}")
 
         print("\n=== 4. CART ===")
         r = await client.post(f"/users/{user_id}/cart", json={"product_ids": [product_id]})
@@ -60,43 +50,16 @@ async def main():
         })
         print(f"CREATE: {r.status_code} {r.json()}")
         order_id = r.json()["id"]
-        item_id = r.json()["items"][0]["id"]
 
-        r = await client.get(f"/orders/{order_id}")
-        print(f"GET:    {r.status_code} {r.json()}")
-
-        r = await client.patch(f"/orders/{order_id}", json={"status": "PAID"})
-        print(f"UPDATE: {r.status_code} {r.json()}")
+        r = await client.get("/orders/")
+        print(f"LIST:   {r.status_code} total={r.json()['total']}")
 
         print("\n=== 6. ORDER ITEM ===")
         r = await client.post(f"/orders/{order_id}/items", json={"product_id": product_id, "quantity": 3})
         print(f"CREATE: {r.status_code} {r.json()}")
-        extra_item_id = r.json()["id"]
 
-        r = await client.get(f"/order-items/{extra_item_id}")
-        print(f"GET:    {r.status_code} {r.json()}")
-
-        r = await client.patch(f"/order-items/{extra_item_id}", json={"quantity": 5})
-        print(f"UPDATE: {r.status_code} {r.json()}")
-
-        print("\n=== 7. DELETE ===")
-        r = await client.delete(f"/order-items/{extra_item_id}")
-        print(f"DELETE order_item: {r.status_code}")
-
-        r = await client.delete(f"/orders/{order_id}")
-        print(f"DELETE order:      {r.status_code}")
-
-        r = await client.delete(f"/users/{user_id}/cart")
-        print(f"DELETE cart:       {r.status_code}")
-
-        r = await client.delete(f"/products/{product_id}")
-        print(f"DELETE product:    {r.status_code}")
-
-        r = await client.delete(f"/users/{user_id}")
-        print(f"DELETE user:       {r.status_code}")
-
-        r = await client.delete(f"/categories/{category_id}")
-        print(f"DELETE category:   {r.status_code}")
+        r = await client.get(f"/orders/{order_id}/items")
+        print(f"LIST:   {r.status_code} count={len(r.json())}")
 
         print("\nDone!")
 

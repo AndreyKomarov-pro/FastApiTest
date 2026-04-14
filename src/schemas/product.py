@@ -7,6 +7,18 @@ from pydantic import BaseModel, Field, field_validator
 from src.schemas.category import CategoryResponse
 
 
+class ProductCreateBody(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    price: Decimal = Field(..., gt=0, decimal_places=2)
+    quantity: int = Field(default=0, ge=0)
+
+    @field_validator("name")
+    @classmethod
+    def name_strip(cls, v: str) -> str:
+        return v.strip()
+
+
 class ProductCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2000)

@@ -10,7 +10,7 @@ from src.repositories.category_repository import CategoryRepository
 from src.repositories.product_repository import ProductRepository
 from src.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse
 from src.schemas.pagination import PageResponse
-from src.schemas.product import ProductCreate, ProductUpdate, ProductResponse
+from src.schemas.product import ProductCreate, ProductUpdate, ProductResponse, ProductCreateBody
 
 logger = logging.getLogger(__name__)
 
@@ -113,3 +113,27 @@ class CatalogService:
         product = await self._fetch_product(product_id)
         await self.product_repo.delete(product)
         logger.debug("Product deleted id=%s", product_id)
+
+    async def get_products_by_category(self, category_id: UUID, page: int, size: int) -> PageResponse[ProductResponse]:
+        logger.debug("Listing products for category_id=%s page=%s size=%s", category_id, page, size)
+        await self._fetch_category(category_id)
+        offset = (page - 1) * size
+        total = (await self.session.execute(
+            select(func.count()).select_from(ProductModel).where(ProductModel.category_id == category_id)
+        )).scalar_one()
+        items = await self.product_repo.get_by_category(category_id, size, offset)
+        return PageResponse.build(
+            items=[ProductResponse.model_validate(p) for p in items],
+            total=total,
+            page=page,
+            size=size,
+        )
+
+    async def create_product_in_category(self, category_id: UUID, data: ProductCreateBody) -> ProductResponse:
+        logger.info("Creating product in category_id=%s name=%s", category_id, data.name)
+        category = await self._fetch_category(category_id)
+        product = ProductModel(**data.model_dump(), category_id=category_id)
+        product = await self.product_repo.create(product)
+        product.category = category
+        logger.debug("Product created id=%s", product.id)
+        return ProductResponse.model_validate(product)

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, status
 from src.dependencies.users import get_users_service
 from src.schemas.pagination import PageResponse
 from src.schemas.users import (
-    UserCreate, UserUpdate, UserResponse,
+    UserCreate, UserResponse,
     CartCreate, CartResponse,
 )
 from src.services.users_service import UsersService
@@ -30,29 +30,12 @@ async def create_user(
     return await service.create_user(data)
 
 
-@router.get("/users/{user_id}", response_model=UserResponse)
-async def get_user(
+@router.get("/users/{user_id}/cart", response_model=CartResponse)
+async def get_cart(
     user_id: UUID,
     service: UsersService = Depends(get_users_service),
-) -> UserResponse:
-    return await service.get_user_by_id(user_id)
-
-
-@router.patch("/users/{user_id}", response_model=UserResponse)
-async def update_user(
-    user_id: UUID,
-    data: UserUpdate,
-    service: UsersService = Depends(get_users_service),
-) -> UserResponse:
-    return await service.update_user(user_id, data)
-
-
-@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(
-    user_id: UUID,
-    service: UsersService = Depends(get_users_service),
-) -> None:
-    await service.delete_user(user_id)
+) -> CartResponse:
+    return await service.get_cart(user_id)
 
 
 @router.post("/users/{user_id}/cart", response_model=CartResponse, status_code=status.HTTP_201_CREATED)
@@ -62,19 +45,3 @@ async def create_cart(
     service: UsersService = Depends(get_users_service),
 ) -> CartResponse:
     return await service.create_cart(user_id, data)
-
-
-@router.get("/users/{user_id}/cart", response_model=CartResponse)
-async def get_cart(
-    user_id: UUID,
-    service: UsersService = Depends(get_users_service),
-) -> CartResponse:
-    return await service.get_cart(user_id)
-
-
-@router.delete("/users/{user_id}/cart", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_cart(
-    user_id: UUID,
-    service: UsersService = Depends(get_users_service),
-) -> None:
-    await service.delete_cart(user_id)

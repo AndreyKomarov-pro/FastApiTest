@@ -11,10 +11,7 @@ from src.models import OrderModel, OrderEntry, ProductModel
 from src.repositories.order_repository import OrderRepository
 from src.repositories.order_item_repository import OrderItemRepository
 from src.repositories.product_repository import ProductRepository
-from src.schemas.orders import (
-    OrderCreate, OrderUpdate, OrderResponse,
-    OrderItemCreate, OrderItemUpdate, OrderItemResponse,
-)
+from src.schemas.orders import OrderCreate, OrderUpdate, OrderResponse, OrderItemCreate, OrderItemResponse
 from src.schemas.pagination import PageResponse
 
 logger = logging.getLogger(__name__)
@@ -45,12 +42,6 @@ class OrdersService:
         if not order:
             raise NotFoundException("Order", order_id)
         return order
-
-    async def _fetch_order_item(self, item_id: UUID) -> OrderEntry:
-        item = await self.item_repo.get_by_id(item_id)
-        if not item:
-            raise NotFoundException("OrderItem", item_id)
-        return item
 
     async def _fetch_product(self, product_id: UUID) -> ProductModel:
         product = await self.product_repo.get_by_id(product_id)
@@ -83,11 +74,6 @@ class OrdersService:
         result = await self.order_repo.get_by_id(order_id)
         return OrderResponse.model_validate(result)
 
-    async def delete_order(self, order_id: UUID) -> None:
-        logger.info("Deleting order id=%s", order_id)
-        order = await self._fetch_order(order_id)
-        await self.order_repo.delete(order)
-
     async def get_orders(self, page: int, size: int) -> PageResponse[OrderResponse]:
         logger.debug("Listing orders page=%s size=%s", page, size)
         offset = (page - 1) * size
@@ -100,42 +86,21 @@ class OrdersService:
             size=size,
         )
 
-    async def create_order_item(self, order_id: UUID, data: OrderItemCreate) -> OrderItemResponse:
-        logger.info("Creating order item order_id=%s product_id=%s", order_id, data.product_id)
+    async def get_order_items(self, order_id: UUID) -> list[OrderItemResponse]:
+        logger.debug("Listing items for order_id=%s", order_id)
+        await self._fetch_order(order_id)
+        items = await self.item_repo.get_by_order_id(order_id)
+        return [OrderItemResponse.model_validate(i) for i in items]
+
+    async def add_item_to_order(self, order_id: UUID, data: OrderItemCreate) -> OrderItemResponse:
+        logger.info("Adding item to order_id=%s product_id=%s", order_id, data.product_id)
         await self._fetch_order(order_id)
         product = await self._fetch_product(data.product_id)
-
         item = self._to_order_item_model(order_id, product, data)
         item = await self.item_repo.create(item)
-        await self.item_repo.recalc_order_total(order_id)
         item.product = product
-        return OrderItemResponse.model_validate(item)
-
-    async def get_order_item_by_id(self, item_id: UUID) -> OrderItemResponse:
-        logger.debug("Fetching order item id=%s", item_id)
-        item = await self._fetch_order_item(item_id)
-        return OrderItemResponse.model_validate(item)
-
-    async def update_order_item(self, item_id: UUID, data: OrderItemUpdate) -> OrderItemResponse:
-        logger.info("Updating order item id=%s", item_id)
-        item = await self._fetch_order_item(item_id)
-        if data.product is not None:
-            product = await self._fetch_product(data.product.product_id)
-            item.product_id = data.product.product_id
-            item.price = product.price
-        if data.quantity is not None:
-            item.quantity = data.quantity
-        await self.item_repo.update(item)
-        await self.item_repo.recalc_order_total(item.order_id)
-        result = await self.item_repo.get_by_id(item_id)
-        return OrderItemResponse.model_validate(result)
-
-    async def delete_order_item(self, item_id: UUID) -> None:
-        logger.info("Deleting order item id=%s", item_id)
-        item = await self._fetch_order_item(item_id)
-        order_id = item.order_id
-        await self.item_repo.delete(item)
         await self.item_repo.recalc_order_total(order_id)
+        return OrderItemResponse.model_validate(item)
 
     async def _add_items_to_order(
         self, order_id: UUID, items_data: list[OrderItemCreate]

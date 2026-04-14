@@ -30,6 +30,18 @@ class ProductRepository:
         )
         return list(result.scalars().all())
 
+    async def get_by_category(self, category_id: UUID, limit: int, offset: int) -> list[ProductModel]:
+        result = await self.session.execute(
+            select(ProductModel)
+            .where(ProductModel.category_id == category_id)
+            .options(selectinload(ProductModel.category))
+            .order_by(ProductModel.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+            .with_for_update(skip_locked=True)
+        )
+        return list(result.scalars().all())
+
     async def create(self, product: ProductModel) -> ProductModel:
         self.session.add(product)
         await self.session.flush()

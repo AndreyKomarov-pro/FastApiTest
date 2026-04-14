@@ -9,4 +9,4 @@ router = APIRouter(tags=["Health"])
 
 @router.get("/healthcheck", response_model=HealthCheckResponse)
 async def healthcheck() -> HealthCheckResponse:
-    return HealthCheckResponse(status=HTTPStatus.OK.phrase)
+    return HealthCheckResponse(status=HTTPStatus.OK.name.lower())

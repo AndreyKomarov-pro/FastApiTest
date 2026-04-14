@@ -3,10 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from src.dependencies.orders import get_orders_service
-from src.schemas.orders import (
-    OrderCreate, OrderUpdate, OrderResponse,
-    OrderItemCreate, OrderItemUpdate, OrderItemResponse,
-)
+from src.schemas.orders import OrderCreate, OrderItemCreate, OrderItemResponse, OrderResponse
 from src.schemas.pagination import PageResponse
 from src.services.orders_service import OrdersService
 
@@ -30,64 +27,18 @@ async def create_order(
     return await service.create_order(data)
 
 
-@router.get("/orders/{order_id}", response_model=OrderResponse)
-async def get_order(
+@router.get("/orders/{order_id}/items", response_model=list[OrderItemResponse])
+async def list_order_items(
     order_id: UUID,
     service: OrdersService = Depends(get_orders_service),
-) -> OrderResponse:
-    return await service.get_order_by_id(order_id)
+) -> list[OrderItemResponse]:
+    return await service.get_order_items(order_id)
 
 
-@router.patch("/orders/{order_id}", response_model=OrderResponse)
-async def update_order(
-    order_id: UUID,
-    data: OrderUpdate,
-    service: OrdersService = Depends(get_orders_service),
-) -> OrderResponse:
-    return await service.update_order(order_id, data)
-
-
-@router.delete("/orders/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_order(
-    order_id: UUID,
-    service: OrdersService = Depends(get_orders_service),
-) -> None:
-    await service.delete_order(order_id)
-
-
-@router.post(
-    "/orders/{order_id}/items",
-    response_model=OrderItemResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_order_item(
+@router.post("/orders/{order_id}/items", response_model=OrderItemResponse, status_code=status.HTTP_201_CREATED)
+async def add_order_item(
     order_id: UUID,
     data: OrderItemCreate,
     service: OrdersService = Depends(get_orders_service),
 ) -> OrderItemResponse:
-    return await service.create_order_item(order_id, data)
-
-
-@router.get("/order-items/{item_id}", response_model=OrderItemResponse)
-async def get_order_item(
-    item_id: UUID,
-    service: OrdersService = Depends(get_orders_service),
-) -> OrderItemResponse:
-    return await service.get_order_item_by_id(item_id)
-
-
-@router.patch("/order-items/{item_id}", response_model=OrderItemResponse)
-async def update_order_item(
-    item_id: UUID,
-    data: OrderItemUpdate,
-    service: OrdersService = Depends(get_orders_service),
-) -> OrderItemResponse:
-    return await service.update_order_item(item_id, data)
-
-
-@router.delete("/order-items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_order_item(
-    item_id: UUID,
-    service: OrdersService = Depends(get_orders_service),
-) -> None:
-    await service.delete_order_item(item_id)
+    return await service.add_item_to_order(order_id, data)
