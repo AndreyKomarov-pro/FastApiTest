@@ -2,7 +2,7 @@ from http import HTTPStatus
 
 from fastapi import APIRouter
 
-from src.schemas.healthcheck_schemas import HealthCheckResponse
+from src.schemas.healthcheck import HealthCheckResponse
 
 router = APIRouter(tags=["Health"])
 

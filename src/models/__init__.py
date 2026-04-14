@@ -3,7 +3,7 @@ from .user import UserModel
 from .category import CategoryModel
 from .product import ProductModel
 from .order import OrderModel
-from .order_line import OrderLineModel
+from .order_entry import OrderEntry
 from .cart import CartModel
 from .cart_product import cart_products
 
@@ -14,7 +14,7 @@ __all__ = [
     "CategoryModel",
     "ProductModel",
     "OrderModel",
-    "OrderLineModel",
+    "OrderEntry",
     "CartModel",
     "cart_products",
 ]

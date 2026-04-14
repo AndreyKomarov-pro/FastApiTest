@@ -1,11 +1,11 @@
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.models import OrderModel, OrderLineModel, ProductModel
+from src.models import OrderModel, OrderEntry
 
 
 class OrderRepository:
@@ -19,8 +19,7 @@ class OrderRepository:
             .options(
                 selectinload(OrderModel.user),
                 selectinload(OrderModel.items)
-                .selectinload(OrderLineModel.product)
-                .selectinload(ProductModel.category),
+                .selectinload(OrderEntry.product),
             )
         )
         return result.scalar_one_or_none()
@@ -31,8 +30,7 @@ class OrderRepository:
             .options(
                 selectinload(OrderModel.user),
                 selectinload(OrderModel.items)
-                .selectinload(OrderLineModel.product)
-                .selectinload(ProductModel.category),
+                .selectinload(OrderEntry.product),
             )
             .order_by(OrderModel.created_at.desc())
             .limit(limit)
@@ -40,10 +38,6 @@ class OrderRepository:
             .with_for_update(skip_locked=True)
         )
         return list(result.scalars().all())
-
-    async def count(self) -> int:
-        result = await self.session.execute(select(func.count()).select_from(OrderModel))
-        return result.scalar_one()
 
     async def create(self, order: OrderModel) -> OrderModel:
         self.session.add(order)

@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from src.schemas.product_schemas import ProductInCartResponse
+from src.schemas.product import ProductInCartResponse
 
 
 class UserCreate(BaseModel):

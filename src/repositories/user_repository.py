@@ -55,10 +55,6 @@ class UserRepository:
         )
         return list(result.scalars().all())
 
-    async def count(self) -> int:
-        result = await self.session.execute(select(func.count()).select_from(UserModel))
-        return result.scalar_one()
-
     async def create(self, user: UserModel) -> UserModel:
         self.session.add(user)
         await self.session.flush()

@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.schemas.category_schemas import CategoryResponse
+from src.schemas.category import CategoryResponse
 
 
 class ProductCreate(BaseModel):

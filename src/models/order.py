@@ -28,7 +28,7 @@ class OrderModel(Base):
     )
 
     user: Mapped["UserModel"] = relationship(back_populates="orders")
-    items: Mapped[list["OrderLineModel"]] = relationship(
+    items: Mapped[list["OrderEntry"]] = relationship(
         back_populates="order",
         cascade="all, delete-orphan",
     )

@@ -1,19 +1,21 @@
 import logging
 from uuid import UUID
 
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.exceptions import NotFoundException, AlreadyExistsException
 from src.models import UserModel, CartModel
 from src.repositories.user_repository import UserRepository
 from src.schemas.pagination import PageResponse
-from src.schemas.users_schemas import UserCreate, UserUpdate, UserResponse, CartCreate, CartResponse
+from src.schemas.users import UserCreate, UserUpdate, UserResponse, CartCreate, CartResponse
 
 logger = logging.getLogger(__name__)
 
 
 class UsersService:
     def __init__(self, session: AsyncSession) -> None:
+        self.session = session
         self.user_repo = UserRepository(session)
 
     async def _fetch_user(self, user_id: UUID) -> UserModel:
@@ -56,7 +58,8 @@ class UsersService:
     async def get_users(self, page: int, size: int) -> PageResponse[UserResponse]:
         logger.debug("Listing users page=%s size=%s", page, size)
         offset = (page - 1) * size
-        items, total = await self.user_repo.get_all(size, offset), await self.user_repo.count()
+        total = (await self.session.execute(select(func.count()).select_from(UserModel))).scalar_one()
+        items = await self.user_repo.get_all(size, offset)
         return PageResponse.build(
             items=[UserResponse.model_validate(u) for u in items],
             total=total,

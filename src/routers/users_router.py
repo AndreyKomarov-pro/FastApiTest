@@ -1,11 +1,10 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database import get_db
+from src.dependencies.users import get_users_service
 from src.schemas.pagination import PageResponse
-from src.schemas.users_schemas import (
+from src.schemas.users import (
     UserCreate, UserUpdate, UserResponse,
     CartCreate, CartResponse,
 )
@@ -14,15 +13,11 @@ from src.services.users_service import UsersService
 router = APIRouter(tags=["Users"])
 
 
-def get_service(session: AsyncSession = Depends(get_db)) -> UsersService:
-    return UsersService(session)
-
-
 @router.get("/users/", response_model=PageResponse[UserResponse])
 async def list_users(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=100),
-    service: UsersService = Depends(get_service),
+    service: UsersService = Depends(get_users_service),
 ) -> PageResponse[UserResponse]:
     return await service.get_users(page, size)
 
@@ -30,7 +25,7 @@ async def list_users(
 @router.post("/users/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
     data: UserCreate,
-    service: UsersService = Depends(get_service),
+    service: UsersService = Depends(get_users_service),
 ) -> UserResponse:
     return await service.create_user(data)
 
@@ -38,7 +33,7 @@ async def create_user(
 @router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: UUID,
-    service: UsersService = Depends(get_service),
+    service: UsersService = Depends(get_users_service),
 ) -> UserResponse:
     return await service.get_user_by_id(user_id)
 
@@ -47,7 +42,7 @@ async def get_user(
 async def update_user(
     user_id: UUID,
     data: UserUpdate,
-    service: UsersService = Depends(get_service),
+    service: UsersService = Depends(get_users_service),
 ) -> UserResponse:
     return await service.update_user(user_id, data)
 
@@ -55,7 +50,7 @@ async def update_user(
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: UUID,
-    service: UsersService = Depends(get_service),
+    service: UsersService = Depends(get_users_service),
 ) -> None:
     await service.delete_user(user_id)
 
@@ -64,7 +59,7 @@ async def delete_user(
 async def create_cart(
     user_id: UUID,
     data: CartCreate,
-    service: UsersService = Depends(get_service),
+    service: UsersService = Depends(get_users_service),
 ) -> CartResponse:
     return await service.create_cart(user_id, data)
 
@@ -72,7 +67,7 @@ async def create_cart(
 @router.get("/users/{user_id}/cart", response_model=CartResponse)
 async def get_cart(
     user_id: UUID,
-    service: UsersService = Depends(get_service),
+    service: UsersService = Depends(get_users_service),
 ) -> CartResponse:
     return await service.get_cart(user_id)
 
@@ -80,6 +75,6 @@ async def get_cart(
 @router.delete("/users/{user_id}/cart", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_cart(
     user_id: UUID,
-    service: UsersService = Depends(get_service),
+    service: UsersService = Depends(get_users_service),
 ) -> None:
     await service.delete_cart(user_id)

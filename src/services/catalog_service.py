@@ -1,21 +1,23 @@
 import logging
 from uuid import UUID
 
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.exceptions import NotFoundException
 from src.models import CategoryModel, ProductModel
 from src.repositories.category_repository import CategoryRepository
 from src.repositories.product_repository import ProductRepository
-from src.schemas.category_schemas import CategoryCreate, CategoryUpdate, CategoryResponse
+from src.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse
 from src.schemas.pagination import PageResponse
-from src.schemas.product_schemas import ProductCreate, ProductUpdate, ProductResponse
+from src.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 
 logger = logging.getLogger(__name__)
 
 
 class CatalogService:
     def __init__(self, session: AsyncSession) -> None:
+        self.session = session
         self.category_repo = CategoryRepository(session)
         self.product_repo = ProductRepository(session)
 
@@ -39,8 +41,9 @@ class CatalogService:
         return CategoryResponse.model_validate(result)
 
     async def get_category_by_id(self, category_id: UUID) -> CategoryResponse:
-        logger.debug("Fetching category id=%s", category_id)
+        logger.info("Fetching category id=%s", category_id)
         category = await self._fetch_category(category_id)
+        logger.debug("Category fetched id=%s", category.id)
         return CategoryResponse.model_validate(category)
 
     async def update_category(self, category_id: UUID, data: CategoryUpdate) -> CategoryResponse:
@@ -75,8 +78,6 @@ class CatalogService:
     async def update_product(self, product_id: UUID, data: ProductUpdate) -> ProductResponse:
         logger.info("Updating product id=%s", product_id)
         product = await self._fetch_product(product_id)
-        if data.category_id is not None:
-            await self._fetch_category(data.category_id)
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(product, field, value)
         updated = await self.product_repo.update(product)
@@ -86,7 +87,8 @@ class CatalogService:
     async def get_categories(self, page: int, size: int) -> PageResponse[CategoryResponse]:
         logger.debug("Listing categories page=%s size=%s", page, size)
         offset = (page - 1) * size
-        items, total = await self.category_repo.get_all(size, offset), await self.category_repo.count()
+        total = (await self.session.execute(select(func.count()).select_from(CategoryModel))).scalar_one()
+        items = await self.category_repo.get_all(size, offset)
         return PageResponse.build(
             items=[CategoryResponse.model_validate(c) for c in items],
             total=total,
@@ -97,7 +99,8 @@ class CatalogService:
     async def get_products(self, page: int, size: int) -> PageResponse[ProductResponse]:
         logger.debug("Listing products page=%s size=%s", page, size)
         offset = (page - 1) * size
-        items, total = await self.product_repo.get_all(size, offset), await self.product_repo.count()
+        total = (await self.session.execute(select(func.count()).select_from(ProductModel))).scalar_one()
+        items = await self.product_repo.get_all(size, offset)
         return PageResponse.build(
             items=[ProductResponse.model_validate(p) for p in items],
             total=total,

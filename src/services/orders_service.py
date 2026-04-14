@@ -2,14 +2,16 @@ import logging
 from decimal import Decimal
 from uuid import UUID
 
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.enums.order_status import OrderStatus
 from src.exceptions import NotFoundException
-from src.models import OrderModel, OrderLineModel, ProductModel
+from src.models import OrderModel, OrderEntry, ProductModel
 from src.repositories.order_repository import OrderRepository
 from src.repositories.order_item_repository import OrderItemRepository
-from src.schemas.orders_schemas import (
+from src.repositories.product_repository import ProductRepository
+from src.schemas.orders import (
     OrderCreate, OrderUpdate, OrderResponse,
     OrderItemCreate, OrderItemUpdate, OrderItemResponse,
 )
@@ -20,16 +22,18 @@ logger = logging.getLogger(__name__)
 
 class OrdersService:
     def __init__(self, session: AsyncSession) -> None:
+        self.session = session
         self.order_repo = OrderRepository(session)
         self.item_repo = OrderItemRepository(session)
+        self.product_repo = ProductRepository(session)
 
     @staticmethod
     def _to_order_model(data: OrderCreate) -> OrderModel:
         return OrderModel(user_id=data.user_id, status=OrderStatus.PENDING, total_amount=0)
 
     @staticmethod
-    def _to_order_item_model(order_id: UUID, product: ProductModel, data: OrderItemCreate) -> OrderLineModel:
-        return OrderLineModel(
+    def _to_order_item_model(order_id: UUID, product: ProductModel, data: OrderItemCreate) -> OrderEntry:
+        return OrderEntry(
             order_id=order_id,
             product_id=product.id,
             quantity=data.quantity,
@@ -42,11 +46,17 @@ class OrdersService:
             raise NotFoundException("Order", order_id)
         return order
 
-    async def _fetch_order_item(self, item_id: UUID) -> OrderLineModel:
+    async def _fetch_order_item(self, item_id: UUID) -> OrderEntry:
         item = await self.item_repo.get_by_id(item_id)
         if not item:
             raise NotFoundException("OrderItem", item_id)
         return item
+
+    async def _fetch_product(self, product_id: UUID) -> ProductModel:
+        product = await self.product_repo.get_by_id(product_id)
+        if not product:
+            raise NotFoundException("Product", product_id)
+        return product
 
     async def create_order(self, data: OrderCreate) -> OrderResponse:
         logger.info("Creating order for user_id=%s", data.user_id)
@@ -81,7 +91,8 @@ class OrdersService:
     async def get_orders(self, page: int, size: int) -> PageResponse[OrderResponse]:
         logger.debug("Listing orders page=%s size=%s", page, size)
         offset = (page - 1) * size
-        items, total = await self.order_repo.get_all(size, offset), await self.order_repo.count()
+        total = (await self.session.execute(select(func.count()).select_from(OrderModel))).scalar_one()
+        items = await self.order_repo.get_all(size, offset)
         return PageResponse.build(
             items=[OrderResponse.model_validate(o) for o in items],
             total=total,
@@ -91,13 +102,8 @@ class OrdersService:
 
     async def create_order_item(self, order_id: UUID, data: OrderItemCreate) -> OrderItemResponse:
         logger.info("Creating order item order_id=%s product_id=%s", order_id, data.product_id)
-        order = await self.item_repo.get_order(order_id)
-        if not order:
-            raise NotFoundException("Order", order_id)
-
-        product = await self.item_repo.get_product(data.product_id)
-        if not product:
-            raise NotFoundException("Product", data.product_id)
+        await self._fetch_order(order_id)
+        product = await self._fetch_product(data.product_id)
 
         item = self._to_order_item_model(order_id, product, data)
         item = await self.item_repo.create(item)
@@ -114,9 +120,7 @@ class OrdersService:
         logger.info("Updating order item id=%s", item_id)
         item = await self._fetch_order_item(item_id)
         if data.product is not None:
-            product = await self.item_repo.get_product(data.product.product_id)
-            if not product:
-                raise NotFoundException("Product", data.product.product_id)
+            product = await self._fetch_product(data.product.product_id)
             item.product_id = data.product.product_id
             item.price = product.price
         if data.quantity is not None:
@@ -138,9 +142,7 @@ class OrdersService:
     ) -> Decimal:
         total = Decimal("0")
         for item_data in items_data:
-            product = await self.item_repo.get_product(item_data.product_id)
-            if not product:
-                raise NotFoundException("Product", item_data.product_id)
+            product = await self._fetch_product(item_data.product_id)
             item = self._to_order_item_model(order_id, product, item_data)
             await self.item_repo.create(item)
             total += Decimal(str(product.price)) * item_data.quantity

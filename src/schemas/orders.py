@@ -5,8 +5,8 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from src.enums.order_status import OrderStatus
-from src.schemas.product_schemas import ProductResponse
-from src.schemas.users_schemas import UserResponse
+from src.schemas.product import ProductInCartResponse
+from src.schemas.users import UserResponse
 
 
 class OrderItemProductRef(BaseModel):
@@ -27,7 +27,7 @@ class OrderItemResponse(BaseModel):
     id: UUID
     quantity: int
     price: Decimal
-    product: ProductResponse
+    product: ProductInCartResponse
 
     model_config = {"from_attributes": True}
 
