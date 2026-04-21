@@ -25,7 +25,6 @@ class CategoryRepository:
         return category
 
     async def update(self, category: CategoryModel) -> CategoryModel:
-        await self.session.flush()
         await self.session.refresh(category)
         return category
 

@@ -1,7 +1,6 @@
 import logging
 from uuid import UUID
 
-from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.exceptions import NotFoundException
@@ -87,11 +86,9 @@ class CatalogService:
     async def get_categories(self, page: int, size: int) -> PageResponse[CategoryResponse]:
         logger.debug("Listing categories page=%s size=%s", page, size)
         offset = (page - 1) * size
-        total = (await self.session.execute(select(func.count()).select_from(CategoryModel))).scalar_one()
         items = await self.category_repo.get_all(size, offset)
         return PageResponse.build(
             items=[CategoryResponse.model_validate(c) for c in items],
-            total=total,
             page=page,
             size=size,
         )
@@ -99,11 +96,9 @@ class CatalogService:
     async def get_products(self, page: int, size: int) -> PageResponse[ProductResponse]:
         logger.debug("Listing products page=%s size=%s", page, size)
         offset = (page - 1) * size
-        total = (await self.session.execute(select(func.count()).select_from(ProductModel))).scalar_one()
         items = await self.product_repo.get_all(size, offset)
         return PageResponse.build(
             items=[ProductResponse.model_validate(p) for p in items],
-            total=total,
             page=page,
             size=size,
         )
@@ -118,13 +113,9 @@ class CatalogService:
         logger.debug("Listing products for category_id=%s page=%s size=%s", category_id, page, size)
         await self._fetch_category(category_id)
         offset = (page - 1) * size
-        total = (await self.session.execute(
-            select(func.count()).select_from(ProductModel).where(ProductModel.category_id == category_id)
-        )).scalar_one()
         items = await self.product_repo.get_by_category(category_id, size, offset)
         return PageResponse.build(
             items=[ProductResponse.model_validate(p) for p in items],
-            total=total,
             page=page,
             size=size,
         )

@@ -1,8 +1,9 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.dependencies.orders import get_orders_service
+from src.database import get_db
 from src.schemas.orders import OrderCreate, OrderItemCreate, OrderItemResponse, OrderResponse
 from src.schemas.pagination import PageResponse
 from src.services.orders_service import OrdersService
@@ -14,24 +15,27 @@ router = APIRouter(tags=["Orders"])
 async def list_orders(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=100),
-    service: OrdersService = Depends(get_orders_service),
+    session: AsyncSession = Depends(get_db),
 ) -> PageResponse[OrderResponse]:
+    service = OrdersService(session)
     return await service.get_orders(page, size)
 
 
 @router.post("/orders/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(
     data: OrderCreate,
-    service: OrdersService = Depends(get_orders_service),
+    session: AsyncSession = Depends(get_db),
 ) -> OrderResponse:
+    service = OrdersService(session)
     return await service.create_order(data)
 
 
 @router.get("/orders/{order_id}/items", response_model=list[OrderItemResponse])
 async def list_order_items(
     order_id: UUID,
-    service: OrdersService = Depends(get_orders_service),
+    session: AsyncSession = Depends(get_db),
 ) -> list[OrderItemResponse]:
+    service = OrdersService(session)
     return await service.get_order_items(order_id)
 
 
@@ -39,6 +43,16 @@ async def list_order_items(
 async def add_order_item(
     order_id: UUID,
     data: OrderItemCreate,
-    service: OrdersService = Depends(get_orders_service),
+    session: AsyncSession = Depends(get_db),
 ) -> OrderItemResponse:
+    service = OrdersService(session)
     return await service.add_item_to_order(order_id, data)
+
+
+@router.delete("/orders/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_order(
+    order_id: UUID,
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    service = OrdersService(session)
+    await service.delete_order(order_id)

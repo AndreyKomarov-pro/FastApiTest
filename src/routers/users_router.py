@@ -1,8 +1,9 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.dependencies.users import get_users_service
+from src.database import get_db
 from src.schemas.pagination import PageResponse
 from src.schemas.users import (
     UserCreate, UserResponse,
@@ -17,24 +18,27 @@ router = APIRouter(tags=["Users"])
 async def list_users(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=100),
-    service: UsersService = Depends(get_users_service),
+    session: AsyncSession = Depends(get_db),
 ) -> PageResponse[UserResponse]:
+    service = UsersService(session)
     return await service.get_users(page, size)
 
 
 @router.post("/users/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
     data: UserCreate,
-    service: UsersService = Depends(get_users_service),
+    session: AsyncSession = Depends(get_db),
 ) -> UserResponse:
+    service = UsersService(session)
     return await service.create_user(data)
 
 
 @router.get("/users/{user_id}/cart", response_model=CartResponse)
 async def get_cart(
     user_id: UUID,
-    service: UsersService = Depends(get_users_service),
+    session: AsyncSession = Depends(get_db),
 ) -> CartResponse:
+    service = UsersService(session)
     return await service.get_cart(user_id)
 
 
@@ -42,6 +46,7 @@ async def get_cart(
 async def create_cart(
     user_id: UUID,
     data: CartCreate,
-    service: UsersService = Depends(get_users_service),
+    session: AsyncSession = Depends(get_db),
 ) -> CartResponse:
+    service = UsersService(session)
     return await service.create_cart(user_id, data)

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -12,9 +12,6 @@ class UserRepository:
         self.session = session
 
     async def get_by_id(self, user_id: UUID) -> UserModel | None:
-        return await self.session.get(UserModel, user_id)
-
-    async def get_with_cart(self, user_id: UUID) -> UserModel | None:
         result = await self.session.execute(
             select(UserModel)
             .where(UserModel.id == user_id)
@@ -61,7 +58,6 @@ class UserRepository:
         return user
 
     async def update(self, user: UserModel) -> UserModel:
-        await self.session.flush()
         await self.session.refresh(user)
         return user
 

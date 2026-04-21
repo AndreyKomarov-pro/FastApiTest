@@ -2,7 +2,6 @@ import logging
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.enums.order_status import OrderStatus
@@ -77,11 +76,9 @@ class OrdersService:
     async def get_orders(self, page: int, size: int) -> PageResponse[OrderResponse]:
         logger.debug("Listing orders page=%s size=%s", page, size)
         offset = (page - 1) * size
-        total = (await self.session.execute(select(func.count()).select_from(OrderModel))).scalar_one()
         items = await self.order_repo.get_all(size, offset)
         return PageResponse.build(
             items=[OrderResponse.model_validate(o) for o in items],
-            total=total,
             page=page,
             size=size,
         )
@@ -101,6 +98,11 @@ class OrdersService:
         item.product = product
         await self.item_repo.recalc_order_total(order_id)
         return OrderItemResponse.model_validate(item)
+
+    async def delete_order(self, order_id: UUID) -> None:
+        logger.info("Deleting order id=%s", order_id)
+        order = await self._fetch_order(order_id)
+        await self.order_repo.delete(order)
 
     async def _add_items_to_order(
         self, order_id: UUID, items_data: list[OrderItemCreate]
