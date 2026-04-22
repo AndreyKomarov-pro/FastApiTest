@@ -1,11 +1,10 @@
-from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.models import OrderEntry, ProductModel, OrderModel
+from src.models import OrderEntry, ProductModel
 
 
 class OrderItemRepository:
@@ -36,26 +35,8 @@ class OrderItemRepository:
         return item
 
     async def update(self, item: OrderEntry) -> OrderEntry:
-        await self.session.flush()
         await self.session.refresh(item)
         return item
 
     async def delete(self, item: OrderEntry) -> None:
         await self.session.delete(item)
-
-    async def recalc_order_total(self, order_id: UUID) -> None:
-        result = await self.session.execute(
-            select(OrderEntry).where(OrderEntry.order_id == order_id)
-        )
-        items = result.scalars().all()
-        order = await self.session.get(OrderModel, order_id)
-        if order:
-            order.total_amount = self._calculate_total(items)
-            await self.session.flush()
-
-    @staticmethod
-    def _calculate_total(items: list[OrderEntry]) -> Decimal:
-        return sum(
-            (Decimal(str(item.price)) * item.quantity for item in items),
-            Decimal("0"),
-        )

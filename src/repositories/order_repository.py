@@ -1,4 +1,3 @@
-from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import select
@@ -15,7 +14,7 @@ class OrderRepository:
     async def get_by_id(self, order_id: UUID) -> OrderModel | None:
         result = await self.session.execute(
             select(OrderModel)
-            .where(OrderModel.id == order_id)
+            .where(OrderModel.id == order_id, OrderModel.is_deleted == False)
             .options(
                 selectinload(OrderModel.user),
                 selectinload(OrderModel.items)
@@ -27,6 +26,7 @@ class OrderRepository:
     async def get_all(self, limit: int, offset: int) -> list[OrderModel]:
         result = await self.session.execute(
             select(OrderModel)
+            .where(OrderModel.is_deleted == False)
             .options(
                 selectinload(OrderModel.user),
                 selectinload(OrderModel.items)
@@ -45,13 +45,8 @@ class OrderRepository:
         return order
 
     async def update(self, order: OrderModel) -> OrderModel:
-        await self.session.flush()
         await self.session.refresh(order)
         return order
 
-    async def update_total(self, order: OrderModel, total: Decimal) -> None:
-        order.total_amount = total
-        await self.session.flush()
-
     async def delete(self, order: OrderModel) -> None:
-        await self.session.delete(order)
+        order.is_deleted = True

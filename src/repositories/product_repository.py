@@ -48,7 +48,6 @@ class ProductRepository:
         return product
 
     async def update(self, product: ProductModel) -> ProductModel:
-        await self.session.flush()
         await self.session.refresh(product)
         return product
 

@@ -25,7 +25,7 @@ class OrdersService:
 
     @staticmethod
     def _to_order_model(data: OrderCreate) -> OrderModel:
-        return OrderModel(user_id=data.user_id, status=OrderStatus.PENDING, total_amount=0)
+        return OrderModel(user_id=data.user_id, status=OrderStatus.PENDING)
 
     @staticmethod
     def _to_order_item_model(order_id: UUID, product: ProductModel, data: OrderItemCreate) -> OrderEntry:
@@ -53,8 +53,10 @@ class OrdersService:
         order = self._to_order_model(data)
         order = await self.order_repo.create(order)
 
-        total = await self._add_items_to_order(order.id, data.item_ids)
-        await self.order_repo.update_total(order, total)
+        for item_data in data.item_ids:
+            product = await self._fetch_product(item_data.product_id)
+            item = self._to_order_item_model(order.id, product, item_data)
+            await self.item_repo.create(item)
 
         result = await self.order_repo.get_by_id(order.id)
         return OrderResponse.model_validate(result)
@@ -96,7 +98,6 @@ class OrdersService:
         item = self._to_order_item_model(order_id, product, data)
         item = await self.item_repo.create(item)
         item.product = product
-        await self.item_repo.recalc_order_total(order_id)
         return OrderItemResponse.model_validate(item)
 
     async def delete_order(self, order_id: UUID) -> None:
@@ -104,13 +105,3 @@ class OrdersService:
         order = await self._fetch_order(order_id)
         await self.order_repo.delete(order)
 
-    async def _add_items_to_order(
-        self, order_id: UUID, items_data: list[OrderItemCreate]
-    ) -> Decimal:
-        total = Decimal("0")
-        for item_data in items_data:
-            product = await self._fetch_product(item_data.product_id)
-            item = self._to_order_item_model(order_id, product, item_data)
-            await self.item_repo.create(item)
-            total += Decimal(str(product.price)) * item_data.quantity
-        return total

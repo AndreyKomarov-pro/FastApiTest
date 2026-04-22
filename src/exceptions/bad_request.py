@@ -1,6 +1,10 @@
 from fastapi import HTTPException
+from starlette import status
 
 
 class BadRequestException(HTTPException):
     def __init__(self, detail: str):
-        super().__init__(status_code=400, detail=detail)
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail,
+        )

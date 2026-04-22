@@ -1,3 +1,4 @@
+from typing import Optional
 from decimal import Decimal
 from uuid import UUID
 from datetime import datetime
@@ -15,12 +16,12 @@ class OrderItemProductRef(BaseModel):
 
 class OrderItemCreate(BaseModel):
     product_id: UUID
-    quantity: int = Field(default=1, ge=1)
+    quantity: int = Field(default=1, ge=1, description="Количество товара")
 
 
 class OrderItemUpdate(BaseModel):
-    quantity: int | None = Field(default=None, ge=1)
-    product: OrderItemProductRef | None = None
+    quantity: Optional[int] = Field(default=None, ge=1, description="Количество товара")
+    product: Optional[OrderItemProductRef] = None
 
 
 class OrderItemResponse(BaseModel):
@@ -34,19 +35,18 @@ class OrderItemResponse(BaseModel):
 
 class OrderCreate(BaseModel):
     user_id: UUID
-    item_ids: list[OrderItemCreate] = Field(default_factory=list)
+    item_ids: list[OrderItemCreate] = Field(default_factory=list, description="Список товаров")
 
 
 class OrderUpdate(BaseModel):
-    status: OrderStatus | None = None
+    status: Optional[OrderStatus] = None
 
 
 class OrderResponse(BaseModel):
     id: UUID
     status: OrderStatus
-    total_amount: Decimal
     created_at: datetime
-    updated_at: datetime | None
+    updated_at: Optional[datetime]
     user: UserResponse
     items: list[OrderItemResponse] = []
 

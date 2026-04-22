@@ -1,9 +1,10 @@
 from fastapi import HTTPException
+from starlette import status
 
 
 class AlreadyExistsException(HTTPException):
-    def __init__(self, entity: str, detail: str = ""):
+    def __init__(self, entity: str, detail: str):
         super().__init__(
-            status_code=409,
-            detail=f"{entity} already exists. {detail}".strip(),
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"{entity} already exists. {detail}",
         )

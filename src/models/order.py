@@ -1,4 +1,3 @@
-from decimal import Decimal
 from datetime import datetime
 
 import sqlalchemy as sa
@@ -18,7 +17,6 @@ class OrderModel(Base):
         nullable=False,
     )
     status: Mapped[OrderStatus] = mapped_column(sa.String(20), default=OrderStatus.PENDING)
-    total_amount: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), default=Decimal("0"))
     is_deleted: Mapped[bool] = mapped_column(sa.Boolean, default=False, nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(
         sa.DateTime(timezone=True),
