@@ -4,7 +4,7 @@ from uuid import UUID
 
 from src.exceptions import NotFoundException
 from src.models import OrderModel, ProductModel
-from src.models.order_item_model import OrderEntry
+from src.models.order_entry import OrderEntry
 from src.enums.order_status import OrderStatus
 from src.repositories.orders_repository import OrdersRepository
 from src.schemas.orders import OrderCreate, OrderUpdate, OrderResponse
