@@ -4,11 +4,9 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
+from src.repositories.user_repository import UserRepository
 from src.schemas.pagination import PageResponse
-from src.schemas.users import (
-    UserCreate, UserUpdate, UserResponse,
-    CartUpdate, CartResponse,
-)
+from src.schemas.users import UserCreate, UserUpdate, UserResponse
 from src.services.users_service import UsersService
 
 router = APIRouter(tags=["Users"])
@@ -20,7 +18,7 @@ async def list_users(
     size: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_db),
 ) -> PageResponse[UserResponse]:
-    service = UsersService(session)
+    service = UsersService(UserRepository(session))
     return await service.get_users(page, size)
 
 
@@ -29,7 +27,7 @@ async def create_user(
     data: UserCreate,
     session: AsyncSession = Depends(get_db),
 ) -> UserResponse:
-    service = UsersService(session)
+    service = UsersService(UserRepository(session))
     return await service.create_user(data)
 
 
@@ -39,7 +37,7 @@ async def update_user(
     data: UserUpdate,
     session: AsyncSession = Depends(get_db),
 ) -> UserResponse:
-    service = UsersService(session)
+    service = UsersService(UserRepository(session))
     return await service.update_user(user_id, data)
 
 
@@ -48,42 +46,5 @@ async def delete_user(
     user_id: UUID,
     session: AsyncSession = Depends(get_db),
 ) -> None:
-    service = UsersService(session)
+    service = UsersService(UserRepository(session))
     await service.delete_user(user_id)
-
-
-@router.get("/users/{user_id}/cart", response_model=CartResponse)
-async def get_cart(
-    user_id: UUID,
-    session: AsyncSession = Depends(get_db),
-) -> CartResponse:
-    service = UsersService(session)
-    return await service.get_cart(user_id)
-
-
-@router.post("/users/{user_id}/cart", response_model=CartResponse, status_code=status.HTTP_201_CREATED)
-async def create_cart(
-    user_id: UUID,
-    session: AsyncSession = Depends(get_db),
-) -> CartResponse:
-    service = UsersService(session)
-    return await service.create_cart(user_id)
-
-
-@router.put("/users/{user_id}/cart", response_model=CartResponse)
-async def update_cart(
-    user_id: UUID,
-    data: CartUpdate,
-    session: AsyncSession = Depends(get_db),
-) -> CartResponse:
-    service = UsersService(session)
-    return await service.update_cart(user_id, data)
-
-
-@router.delete("/users/{user_id}/cart", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_cart(
-    user_id: UUID,
-    session: AsyncSession = Depends(get_db),
-) -> None:
-    service = UsersService(session)
-    await service.delete_cart(user_id)

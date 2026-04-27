@@ -10,18 +10,9 @@ from src.schemas.product import ProductInCartResponse
 from src.schemas.users import UserResponse
 
 
-class OrderItemProductRef(BaseModel):
-    product_id: UUID
-
-
-class OrderItemCreate(BaseModel):
+class OrderItemBody(BaseModel):
     product_id: UUID
     quantity: int = Field(default=1, ge=1, description="Количество товара")
-
-
-class OrderItemUpdate(BaseModel):
-    quantity: Optional[int] = Field(default=None, ge=1, description="Количество товара")
-    product: Optional[OrderItemProductRef] = None
 
 
 class OrderItemResponse(BaseModel):
@@ -33,9 +24,13 @@ class OrderItemResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class OrderCreate(BaseModel):
+class OrderBody(BaseModel):
     user_id: UUID
-    item_ids: list[OrderItemCreate] = Field(default_factory=list, description="Список товаров")
+    item_ids: list[OrderItemBody] = Field(default_factory=list, description="Список товаров")
+
+
+class OrderCreate(BaseModel):
+    body: OrderBody
 
 
 class OrderUpdate(BaseModel):

@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
-from src.schemas.orders import OrderCreate, OrderItemCreate, OrderItemResponse, OrderResponse
+from src.repositories.orders_repository import OrdersRepository
+from src.schemas.orders import OrderCreate, OrderUpdate, OrderResponse
 from src.schemas.pagination import PageResponse
 from src.services.orders_service import OrdersService
 
@@ -17,7 +18,7 @@ async def list_orders(
     size: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_db),
 ) -> PageResponse[OrderResponse]:
-    service = OrdersService(session)
+    service = OrdersService(OrdersRepository(session))
     return await service.get_orders(page, size)
 
 
@@ -26,27 +27,18 @@ async def create_order(
     data: OrderCreate,
     session: AsyncSession = Depends(get_db),
 ) -> OrderResponse:
-    service = OrdersService(session)
+    service = OrdersService(OrdersRepository(session))
     return await service.create_order(data)
 
 
-@router.get("/orders/{order_id}/items", response_model=list[OrderItemResponse])
-async def list_order_items(
+@router.put("/orders/{order_id}", response_model=OrderResponse)
+async def update_order(
     order_id: UUID,
+    data: OrderUpdate,
     session: AsyncSession = Depends(get_db),
-) -> list[OrderItemResponse]:
-    service = OrdersService(session)
-    return await service.get_order_items(order_id)
-
-
-@router.post("/orders/{order_id}/items", response_model=OrderItemResponse, status_code=status.HTTP_201_CREATED)
-async def add_order_item(
-    order_id: UUID,
-    data: OrderItemCreate,
-    session: AsyncSession = Depends(get_db),
-) -> OrderItemResponse:
-    service = OrdersService(session)
-    return await service.add_item_to_order(order_id, data)
+) -> OrderResponse:
+    service = OrdersService(OrdersRepository(session))
+    return await service.update_order(order_id, data)
 
 
 @router.delete("/orders/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -54,5 +46,5 @@ async def delete_order(
     order_id: UUID,
     session: AsyncSession = Depends(get_db),
 ) -> None:
-    service = OrdersService(session)
+    service = OrdersService(OrdersRepository(session))
     await service.delete_order(order_id)
