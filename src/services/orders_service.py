@@ -1,9 +1,8 @@
 import logging
-from decimal import Decimal
 from uuid import UUID
 
 from src.exceptions import NotFoundException
-from src.models import OrderModel, ProductModel
+from src.models import OrderModel
 from src.models.order_entry import OrderEntry
 from src.enums.order_status import OrderStatus
 from src.repositories.orders_repository import OrdersRepository
@@ -23,14 +22,11 @@ class OrdersService:
         order = await self.repo.create(order)
 
         for item_data in data.body.item_ids:
-            product = await self.repo.get_product(item_data.product_id)
-            if not product:
-                raise NotFoundException("Product", item_data.product_id)
             item = OrderEntry(
                 order_id=order.id,
-                product_id=product.id,
+                product_id=item_data.product_id,
                 quantity=item_data.quantity,
-                price=Decimal(str(product.price)),
+                price=item_data.price,
             )
             await self.repo.create_item(item)
 

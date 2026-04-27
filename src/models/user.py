@@ -12,8 +12,3 @@ class UserModel(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    cart: Mapped["CartModel"] = relationship(
-        back_populates="user",
-        uselist=False,
-        cascade="all, delete-orphan",
-    )

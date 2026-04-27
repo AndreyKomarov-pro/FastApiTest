@@ -13,6 +13,7 @@ from src.schemas.users import UserResponse
 class OrderItemBody(BaseModel):
     product_id: UUID
     quantity: int = Field(default=1, ge=1, description="Количество товара")
+    price: Decimal = Field(..., gt=0, decimal_places=2, description="Цена товара")
 
 
 class OrderItemResponse(BaseModel):

@@ -5,7 +5,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 from uuid import UUID
 
-from src.models.cart_product import cart_products
 from src.models.base import Base
 
 
@@ -22,8 +21,3 @@ class ProductModel(Base):
     )
 
     category: Mapped["CategoryModel"] = relationship(back_populates="products")
-    carts: Mapped[list["CartModel"]] = relationship(
-        "CartModel",
-        secondary=cart_products,
-        back_populates="products",
-    )

@@ -2,9 +2,9 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 
-from src.models import OrderModel, OrderEntry, ProductModel
+from src.models import OrderModel, OrderEntry
 
 
 class OrdersRepository:
@@ -12,31 +12,42 @@ class OrdersRepository:
         self.session = session
 
     async def get_all(self, limit: int, offset: int) -> list[OrderModel]:
-        result = await self.session.execute(
-            select(OrderModel)
+        order_ids_cte = (
+            select(OrderModel.id)
             .where(OrderModel.is_deleted == False)
-            .options(
-                selectinload(OrderModel.user),
-                selectinload(OrderModel.items)
-                .selectinload(OrderEntry.product),
-            )
             .order_by(OrderModel.created_at.desc())
             .limit(limit)
             .offset(offset)
+            .cte("target_orders")
         )
-        return list(result.scalars().all())
 
-    async def get_by_id(self, order_id: UUID) -> OrderModel | None:
         result = await self.session.execute(
             select(OrderModel)
-            .where(OrderModel.id == order_id, OrderModel.is_deleted == False)
+            .join(order_ids_cte, OrderModel.id == order_ids_cte.c.id)
             .options(
-                selectinload(OrderModel.user),
-                selectinload(OrderModel.items)
-                .selectinload(OrderEntry.product),
+                joinedload(OrderModel.user),
+                joinedload(OrderModel.items).joinedload(OrderEntry.product),
+            )
+            .order_by(OrderModel.created_at.desc())
+        )
+        return list(result.unique().scalars().all())
+
+    async def get_by_id(self, order_id: UUID) -> OrderModel | None:
+        order_cte = (
+            select(OrderModel.id)
+            .where(OrderModel.id == order_id, OrderModel.is_deleted == False)
+            .cte("target_order")
+        )
+
+        result = await self.session.execute(
+            select(OrderModel)
+            .join(order_cte, OrderModel.id == order_cte.c.id)
+            .options(
+                joinedload(OrderModel.user),
+                joinedload(OrderModel.items).joinedload(OrderEntry.product),
             )
         )
-        return result.scalar_one_or_none()
+        return result.unique().scalar_one_or_none()
 
     async def create(self, order: OrderModel) -> OrderModel:
         self.session.add(order)
@@ -47,9 +58,6 @@ class OrdersRepository:
         self.session.add(item)
         await self.session.flush()
         return item
-
-    async def get_product(self, product_id: UUID) -> ProductModel | None:
-        return await self.session.get(ProductModel, product_id)
 
     async def update(self, order: OrderModel) -> OrderModel:
         await self.session.refresh(order)
