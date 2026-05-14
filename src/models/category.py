@@ -1,8 +1,6 @@
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from src.models.base import Base
-
 
 class CategoryModel(Base):
     __tablename__ = 'categories'

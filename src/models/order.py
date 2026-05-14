@@ -1,13 +1,9 @@
-from datetime import datetime
-
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey, func
+from sqlalchemy import ForeignKey
 from uuid import UUID
-
 from src.models.base import Base
 from src.enums.order_status import OrderStatus
-
 
 class OrderModel(Base):
     __tablename__ = 'orders'
@@ -16,17 +12,14 @@ class OrderModel(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    status: Mapped[OrderStatus] = mapped_column(sa.String(20), default=OrderStatus.PENDING)
-    is_deleted: Mapped[bool] = mapped_column(sa.Boolean, default=False, nullable=False)
-    updated_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True),
-        nullable=True,
-        default=None,
-        onupdate=func.now(),
+    status: Mapped[OrderStatus] = mapped_column(
+        sa.String(20),
+        default=OrderStatus.PENDING,
     )
 
     user: Mapped["UserModel"] = relationship(back_populates="orders")
-    items: Mapped[list["OrderEntry"]] = relationship(
+
+    order_items: Mapped[list["OrderItem"]] = relationship(
         back_populates="order",
         cascade="all, delete-orphan",
     )

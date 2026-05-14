@@ -4,12 +4,14 @@ import uuid
 from typing import TypedDict
 
 from fastapi import FastAPI
+from fastapi.responses import UJSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
 from src.exceptions import AppException
-from src.exceptions.handlers import app_exception_handler
+from src.exceptions.handlers import app_exception_handler, validation_exception_handler
+from src.exceptions.validation import ValidationException
 from src.routers.healthcheck_router import router as healthcheck_router
 from src.routers.catalog_router import router as catalog_router
 from src.routers.users_router import router as users_router
@@ -26,11 +28,16 @@ class RequestLogExtra(TypedDict):
     duration_ms: float
 
 
-def _register_routers(app: FastAPI) -> None:
+def _setup_routers(app: FastAPI) -> None:
     app.include_router(healthcheck_router)
     app.include_router(catalog_router, prefix="/api/v1")
     app.include_router(users_router, prefix="/api/v1")
     app.include_router(orders_router, prefix="/api/v1")
+
+
+def _setup_exception_handlers(app: FastAPI) -> None:
+    app.add_exception_handler(AppException, app_exception_handler)
+    app.add_exception_handler(ValidationException, validation_exception_handler)
 
 
 def get_app() -> FastAPI:
@@ -38,6 +45,7 @@ def get_app() -> FastAPI:
         title="Internet Shop API",
         docs_url="/docs",
         openapi_url="/openapi.json",
+        default_response_class=UJSONResponse,
     )
 
     app.add_middleware(
@@ -70,7 +78,7 @@ def get_app() -> FastAPI:
 
         return response
 
-    app.add_exception_handler(AppException, app_exception_handler)
-    _register_routers(app)
+    _setup_exception_handlers(app)
+    _setup_routers(app)
 
     return app
