@@ -3,6 +3,7 @@ from decimal import Decimal
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from src.enums.order_status import OrderStatus
+from src.exceptions.validation import ValidationException
 from src.models.order import OrderModel
 from src.models.order_item import OrderEntryModel
 
@@ -19,7 +20,7 @@ class OrderBody(BaseModel):
     @classmethod
     def validate_items(cls, v: list[OrderEntryBody]) -> list[OrderEntryBody]:
         if not v:
-            raise ValueError("Заказ должен содержать хотя бы один товар")
+            raise ValidationException(field="items", message="Заказ должен содержать хотя бы один товар")
         return v
 
     def to_model(self) -> OrderModel:

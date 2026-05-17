@@ -14,6 +14,7 @@ class UserRepository:
             .options(selectinload(UserModel.profile))
             .where(UserModel.is_deleted == False)
             .order_by(UserModel.created_at.desc())
+            .with_for_update(skip_locked=True)
             .offset(offset)
             .limit(limit)
         )

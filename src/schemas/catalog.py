@@ -2,6 +2,7 @@ from uuid import UUID
 from decimal import Decimal
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict, field_validator
+from src.exceptions.validation import ValidationException
 from src.models.category import CategoryModel
 from src.models.product import ProductModel
 
@@ -16,7 +17,7 @@ class ProductBody(BaseModel):
     def validate_name(cls, v: str) -> str:
         stripped = v.strip()
         if not stripped:
-            raise ValueError("Название товара не может быть пустым")
+            raise ValidationException(field="name", message="Название товара не может быть пустым")
         return stripped
 
     @field_validator("description")
@@ -36,7 +37,7 @@ class CategoryBaseBody(BaseModel):
     def validate_name(cls, v: str) -> str:
         stripped = v.strip()
         if not stripped:
-            raise ValueError("Название категории не может быть пустым")
+            raise ValidationException(field="name", message="Название категории не может быть пустым")
         return stripped
 
     @field_validator("description")

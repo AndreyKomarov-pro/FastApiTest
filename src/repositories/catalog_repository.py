@@ -14,6 +14,7 @@ class CatalogRepository:
             .options(selectinload(CategoryModel.products))
             .where(CategoryModel.is_deleted == False)
             .order_by(CategoryModel.created_at.desc())
+            .with_for_update(skip_locked=True)
             .offset(offset)
             .limit(limit)
         )

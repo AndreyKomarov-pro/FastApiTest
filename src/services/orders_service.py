@@ -13,7 +13,7 @@ class OrdersService:
         self.repo = repo
 
     async def _get_order_orm(self, order_id: UUID) -> OrderModel:
-        order = await self.repo.get_by_id(order_id)
+        order = await self.repo.get_by_id_for_update(order_id)
         if not order:
             raise NotFoundException("Order", order_id)
         return order
