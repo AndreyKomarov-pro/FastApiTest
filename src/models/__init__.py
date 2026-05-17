@@ -4,7 +4,7 @@ from .user_profile import UserProfile
 from .category import CategoryModel
 from .product import ProductModel
 from .order import OrderModel
-from .order_item import OrderItem
+from .order_item import OrderEntryModel
 
 __all__ = [
     "Base",
@@ -13,5 +13,5 @@ __all__ = [
     "CategoryModel",
     "ProductModel",
     "OrderModel",
-    "OrderItem",
+    "OrderEntryModel",
 ]

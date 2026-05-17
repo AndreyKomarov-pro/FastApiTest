@@ -1,7 +1,6 @@
 import logging
 import time
 import uuid
-from typing import TypedDict
 
 from fastapi import FastAPI
 from fastapi.responses import UJSONResponse
@@ -10,32 +9,25 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from src.exceptions import AppException
-from src.exceptions.handlers import app_exception_handler, validation_exception_handler
+from src.exceptions.handler import app_exception_handler, validation_exception_handler
 from src.exceptions.validation import ValidationException
 from src.routers.healthcheck_router import router as healthcheck_router
 from src.routers.catalog_router import router as catalog_router
 from src.routers.users_router import router as users_router
 from src.routers.orders_router import router as orders_router
+from src.schemas.log import RequestLogExtra
 
 logger = logging.getLogger("app")
 
 
-class RequestLogExtra(TypedDict):
-    request_id: str
-    method: str
-    path: str
-    status_code: int
-    duration_ms: float
-
-
-def _setup_routers(app: FastAPI) -> None:
+def _include_routers(app: FastAPI) -> None:
     app.include_router(healthcheck_router)
     app.include_router(catalog_router, prefix="/api/v1")
     app.include_router(users_router, prefix="/api/v1")
     app.include_router(orders_router, prefix="/api/v1")
 
 
-def _setup_exception_handlers(app: FastAPI) -> None:
+def _add_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppException, app_exception_handler)
     app.add_exception_handler(ValidationException, validation_exception_handler)
 
@@ -78,7 +70,7 @@ def get_app() -> FastAPI:
 
         return response
 
-    _setup_exception_handlers(app)
-    _setup_routers(app)
+    _add_handlers(app)
+    _include_routers(app)
 
     return app

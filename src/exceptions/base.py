@@ -1,8 +1,8 @@
-from starlette import status
+from http import HTTPStatus
 
 
 class AppException(Exception):
-    status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
+    status_code: int = HTTPStatus.INTERNAL_SERVER_ERROR
     detail: str = "Internal server error"
 
     def __init__(self, detail: str | None = None):

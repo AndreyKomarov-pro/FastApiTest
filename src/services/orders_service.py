@@ -1,6 +1,7 @@
 import logging
 from uuid import UUID
 from src.exceptions import NotFoundException
+from src.models.order import OrderModel
 from src.repositories.orders_repository import OrdersRepository
 from src.schemas.order import OrderCreate, OrderUpdate, OrderResponse
 from src.schemas.pagination import PageResponse
@@ -10,6 +11,12 @@ logger = logging.getLogger(__name__)
 class OrdersService:
     def __init__(self, repo: OrdersRepository) -> None:
         self.repo = repo
+
+    async def _get_order_orm(self, order_id: UUID) -> OrderModel:
+        order = await self.repo.get_by_id(order_id)
+        if not order:
+            raise NotFoundException("Order", order_id)
+        return order
 
     async def get_orders(self, page: int, size: int) -> PageResponse[OrderResponse]:
         logger.debug("Listing orders page=%s size=%s", page, size)
@@ -29,19 +36,14 @@ class OrdersService:
 
     async def update_order(self, order_id: UUID, data: OrderUpdate) -> OrderResponse:
         logger.info("Updating order id=%s", order_id)
-        order = await self.repo.get_by_id_for_update(order_id)
-        if not order:
-            raise NotFoundException("Order", order_id)
-        if data.body.status is not None:
-            self._update_fields(order, {"status": data.body.status})
+        order = await self._get_order_orm(order_id)
+        self._update_fields(order, data.body.model_dump(exclude_unset=True))
         result = await self.repo.update(order)
         return OrderResponse.from_model(result)
 
     async def delete_order(self, order_id: UUID) -> None:
         logger.info("Deleting order id=%s", order_id)
-        order = await self.repo.get_by_id_for_update(order_id)
-        if not order:
-            raise NotFoundException("Order", order_id)
+        order = await self._get_order_orm(order_id)
         await self.repo.delete(order)
 
     @staticmethod

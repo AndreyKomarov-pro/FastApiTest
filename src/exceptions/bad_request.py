@@ -1,7 +1,7 @@
-from starlette import status
+from http import HTTPStatus
 
 from src.exceptions.base import AppException
 
 
 class BadRequestException(AppException):
-    status_code = status.HTTP_400_BAD_REQUEST
+    status_code = HTTPStatus.BAD_REQUEST

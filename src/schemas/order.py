@@ -1,27 +1,25 @@
 from uuid import UUID
 from decimal import Decimal
 from datetime import datetime
-from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from src.enums.order_status import OrderStatus
-from src.exceptions import ValidationException
 from src.models.order import OrderModel
-from src.models.order_item import OrderItem
+from src.models.order_item import OrderEntryModel
 
-class OrderItemBody(BaseModel):
+class OrderEntryBody(BaseModel):
     product_id: UUID
     quantity: int = Field(default=1, ge=1)
     price: Decimal = Field(..., gt=0, decimal_places=2)
 
 class OrderBody(BaseModel):
     user_id: UUID
-    items: list[OrderItemBody] = Field(default_factory=list)
+    items: list[OrderEntryBody] = Field(default_factory=list)
 
     @field_validator("items")
     @classmethod
-    def validate_items(cls, v: list) -> list:
+    def validate_items(cls, v: list[OrderEntryBody]) -> list[OrderEntryBody]:
         if not v:
-            raise ValidationException(field="items", message="Заказ должен содержать хотя бы один товар")
+            raise ValueError("Заказ должен содержать хотя бы один товар")
         return v
 
     def to_model(self) -> OrderModel:
@@ -30,7 +28,7 @@ class OrderBody(BaseModel):
             status=OrderStatus.PENDING,
         )
         order.order_items = [
-            OrderItem(
+            OrderEntryModel(
                 product_id=item.product_id,
                 quantity=item.quantity,
                 price=item.price,
@@ -43,12 +41,12 @@ class OrderCreate(BaseModel):
     body: OrderBody
 
 class OrderUpdateBody(BaseModel):
-    status: Optional[OrderStatus] = None
+    status: OrderStatus | None = None
 
 class OrderUpdate(BaseModel):
     body: OrderUpdateBody
 
-class OrderItemResponse(BaseModel):
+class OrderEntryResponse(BaseModel):
     id: UUID
     quantity: int
     price: Decimal
@@ -61,8 +59,8 @@ class OrderResponse(BaseModel):
     id: UUID
     status: OrderStatus
     created_at: datetime
-    updated_at: Optional[datetime]
-    order_items: list[OrderItemResponse] = []
+    updated_at: datetime | None
+    order_items: list[OrderEntryResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 

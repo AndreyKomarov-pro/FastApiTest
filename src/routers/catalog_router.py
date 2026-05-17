@@ -16,6 +16,13 @@ async def list_categories(
 ) -> PageResponse[CategoryResponse]:
     return await service.get_categories(page, size)
 
+@router.get("/categories/{category_id}", response_model=CategoryResponse)
+async def get_category(
+    category_id: UUID,
+    service: CatalogService = Depends(get_catalog_service),
+) -> CategoryResponse:
+    return await service.get_category_by_id(category_id)
+
 @router.post("/categories/", response_model=CategoryResponse, status_code=HTTPStatus.CREATED)
 async def create_category(
     data: CategoryCreate,

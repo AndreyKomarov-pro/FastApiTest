@@ -8,14 +8,14 @@ class CatalogRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_all(self, limit: int, offset: int) -> list[CategoryModel]:
+    async def get_all_categories(self, limit: int, offset: int) -> list[CategoryModel]:
         result = await self.session.execute(
             select(CategoryModel)
             .options(selectinload(CategoryModel.products))
             .where(CategoryModel.is_deleted == False)
             .order_by(CategoryModel.created_at.desc())
-            .limit(limit)
             .offset(offset)
+            .limit(limit)
         )
         return list(result.scalars().all())
 
@@ -30,6 +30,7 @@ class CatalogRepository:
     async def get_by_id_for_update(self, category_id: UUID) -> CategoryModel | None:
         result = await self.session.execute(
             select(CategoryModel)
+            .options(selectinload(CategoryModel.products))
             .where(CategoryModel.id == category_id, CategoryModel.is_deleted == False)
             .with_for_update()
         )
@@ -43,7 +44,6 @@ class CatalogRepository:
 
     async def update(self, category: CategoryModel) -> CategoryModel:
         await self.session.flush()
-        await self.session.refresh(category)
         await self.session.refresh(category, attribute_names=["products"])
         return category
 

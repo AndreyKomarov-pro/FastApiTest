@@ -5,7 +5,7 @@ from sqlalchemy import ForeignKey
 from uuid import UUID
 from src.models.base import Base
 
-class OrderItem(Base):
+class OrderEntryModel(Base):
     __tablename__ = 'order_items'
 
     order_id: Mapped[UUID] = mapped_column(

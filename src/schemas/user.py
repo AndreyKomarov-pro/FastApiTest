@@ -2,7 +2,6 @@ import re
 from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
-from src.exceptions import ValidationException
 from src.models.user import UserModel
 from src.models.user_profile import UserProfile
 
@@ -10,7 +9,7 @@ RF_PHONE_REGEX = re.compile(r'^(\+7|7|8)\d{10}$')
 
 class UserProfileBody(BaseModel):
     phone: str | None = Field(default=None, max_length=20)
-    address: str | None = Field(default=None)
+    address: str | None = Field(default=None, max_length=500)
     bio: str | None = Field(default=None)
 
     @field_validator("phone")
@@ -19,39 +18,50 @@ class UserProfileBody(BaseModel):
         if v is not None:
             cleaned = v.strip()
             if not RF_PHONE_REGEX.match(cleaned):
-                raise ValidationException(
-                    field="phone",
-                    message="Телефон должен быть в формате РФ: +7XXXXXXXXXX, 7XXXXXXXXXX или 8XXXXXXXXXX",
-                )
+                raise ValueError("Телефон должен быть в формате РФ: +7XXXXXXXXXX, 7XXXXXXXXXX или 8XXXXXXXXXX")
             return cleaned
         return v
+
+    @field_validator("address")
+    @classmethod
+    def validate_address(cls, v: str | None) -> str | None:
+        if v is not None and not v.strip():
+            raise ValueError("Адрес не может быть пустым если указан")
+        return v.strip() if v else v
 
     @field_validator("bio")
     @classmethod
     def validate_bio(cls, v: str | None) -> str | None:
         if v is not None and not v.strip():
-            raise ValidationException(field="bio", message="Bio не может быть пустым если указано")
+            raise ValueError("Bio не может быть пустым если указано")
         return v.strip() if v else v
 
 class UserBody(BaseModel):
-    username: str = Field(..., min_length=1, max_length=100)
+    username: str = Field(..., max_length=100)
     email: EmailStr
     full_name: str | None = Field(default=None, max_length=200)
     profile: UserProfileBody
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
     @field_validator("username")
     @classmethod
     def validate_username(cls, v: str) -> str:
         stripped = v.strip()
         if not stripped:
-            raise ValidationException(field="username", message="Имя пользователя не может быть пустым")
+            raise ValueError("Имя пользователя не может быть пустым")
         return stripped
 
     @field_validator("full_name")
     @classmethod
     def validate_full_name(cls, v: str | None) -> str | None:
         if v is not None and not v.strip():
-            raise ValidationException(field="full_name", message="Полное имя не может быть пустым если указано")
+            raise ValueError("Полное имя не может быть пустым если указано")
         return v.strip() if v else v
 
     def to_model(self) -> UserModel:

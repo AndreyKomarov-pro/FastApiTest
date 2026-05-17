@@ -14,8 +14,8 @@ class UserRepository:
             .options(selectinload(UserModel.profile))
             .where(UserModel.is_deleted == False)
             .order_by(UserModel.created_at.desc())
-            .limit(limit)
             .offset(offset)
+            .limit(limit)
         )
         return list(result.scalars().all())
 
@@ -30,6 +30,7 @@ class UserRepository:
     async def get_by_id_for_update(self, user_id: UUID) -> UserModel | None:
         result = await self.session.execute(
             select(UserModel)
+            .options(selectinload(UserModel.profile))
             .where(UserModel.id == user_id, UserModel.is_deleted == False)
             .with_for_update()
         )
@@ -43,7 +44,6 @@ class UserRepository:
 
     async def update(self, user: UserModel) -> UserModel:
         await self.session.flush()
-        await self.session.refresh(user)
         await self.session.refresh(user, attribute_names=["profile"])
         return user
 
