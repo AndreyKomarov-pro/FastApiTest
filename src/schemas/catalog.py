@@ -26,7 +26,9 @@ class ProductBody(BaseModel):
         if v is None:
             return None
         stripped = v.strip()
-        return stripped or None
+        if not stripped:
+            raise ValidationException(field="description", message="Описание не может быть пустым")
+        return stripped
 
 class CategoryBaseBody(BaseModel):
     name: str = Field(..., max_length=100)
@@ -46,7 +48,9 @@ class CategoryBaseBody(BaseModel):
         if v is None:
             return None
         stripped = v.strip()
-        return stripped or None
+        if not stripped:
+            raise ValidationException(field="description", message="Описание не может быть пустым")
+        return stripped
 
 
 class CategoryBody(CategoryBaseBody):

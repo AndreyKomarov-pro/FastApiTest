@@ -2,7 +2,6 @@ import logging
 from uuid import UUID
 from src.exceptions import NotFoundException
 from src.models.user import UserModel
-from src.models.user_profile import UserProfile
 from src.repositories.user_repository import UserRepository
 from src.schemas.user import UserCreate, UserUpdate, UserResponse
 from src.schemas.pagination import PageResponse
@@ -38,16 +37,7 @@ class UsersService:
     async def update_user(self, user_id: UUID, data: UserUpdate) -> UserResponse:
         logger.info("Updating user id=%s", user_id)
         user = await self._get_user_orm(user_id)
-        self._update_fields(user, data.body.model_dump(exclude_unset=True, exclude={"profile"}))
-        if data.body.profile:
-            if user.profile:
-                self._update_fields(user.profile, data.body.profile.model_dump(exclude_unset=True))
-            else:
-                user.profile = UserProfile(
-                    phone=data.body.profile.phone,
-                    address=data.body.profile.address,
-                    bio=data.body.profile.bio,
-                )
+        data.body.apply_to(user)
         result = await self.repo.update(user)
         return UserResponse.from_model(result)
 
@@ -55,8 +45,3 @@ class UsersService:
         logger.info("Deleting user id=%s", user_id)
         user = await self._get_user_orm(user_id)
         await self.repo.delete(user)
-
-    @staticmethod
-    def _update_fields(obj, fields: dict) -> None:
-        for field, value in fields.items():
-            setattr(obj, field, value)

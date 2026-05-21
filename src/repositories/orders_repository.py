@@ -39,17 +39,6 @@ class OrdersRepository:
         )
         return result.unique().scalar_one_or_none()
 
-    async def get_by_id_for_update(self, order_id: UUID) -> OrderModel | None:
-        result = await self.session.execute(
-            select(OrderModel)
-            .where(OrderModel.id == order_id, OrderModel.is_deleted == False)
-            .options(
-                joinedload(OrderModel.order_items).joinedload(OrderEntryModel.product)
-            )
-            .with_for_update()
-        )
-        return result.unique().scalar_one_or_none()
-
     async def create(self, order: OrderModel) -> OrderModel:
         self.session.add(order)
         await self.session.flush()

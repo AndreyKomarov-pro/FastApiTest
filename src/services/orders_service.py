@@ -3,7 +3,7 @@ from uuid import UUID
 from src.exceptions import NotFoundException
 from src.models.order import OrderModel
 from src.repositories.orders_repository import OrdersRepository
-from src.schemas.order import OrderCreate, OrderUpdate, OrderResponse
+from src.schemas.order import OrderCreate, OrderUpdate, OrderUpdateBody, OrderResponse
 from src.schemas.pagination import PageResponse
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ class OrdersService:
         self.repo = repo
 
     async def _get_order_orm(self, order_id: UUID) -> OrderModel:
-        order = await self.repo.get_by_id_for_update(order_id)
+        order = await self.repo.get_by_id(order_id)
         if not order:
             raise NotFoundException("Order", order_id)
         return order
@@ -37,7 +37,7 @@ class OrdersService:
     async def update_order(self, order_id: UUID, data: OrderUpdate) -> OrderResponse:
         logger.info("Updating order id=%s", order_id)
         order = await self._get_order_orm(order_id)
-        self._update_fields(order, data.body.model_dump(exclude_unset=True))
+        self._update_fields(order, data.body)
         result = await self.repo.update(order)
         return OrderResponse.from_model(result)
 
@@ -47,6 +47,6 @@ class OrdersService:
         await self.repo.delete(order)
 
     @staticmethod
-    def _update_fields(obj, fields: dict) -> None:
-        for field, value in fields.items():
-            setattr(obj, field, value)
+    def _update_fields(order: OrderModel, fields: OrderUpdateBody) -> None:
+        for key, value in fields.model_dump(exclude_unset=True).items():
+            setattr(order, key, value)

@@ -138,6 +138,20 @@ class UserUpdateBody(BaseModel):
             raise ValidationException(field="full_name", message="Полное имя не может быть пустым если указано")
         return v.strip() if v else v
 
+    def apply_to(self, user: UserModel) -> None:
+        for key, value in self.model_dump(exclude_unset=True, exclude={"profile"}).items():
+            setattr(user, key, value)
+        if self.profile:
+            if user.profile:
+                for key, value in self.profile.model_dump(exclude_unset=True).items():
+                    setattr(user.profile, key, value)
+            else:
+                user.profile = UserProfile(
+                    phone=self.profile.phone,
+                    address=self.profile.address,
+                    bio=self.profile.bio,
+                )
+
 
 class UserCreate(BaseModel):
     body: UserBody
