@@ -3,8 +3,7 @@ from decimal import Decimal
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from src.exceptions.validation import ValidationException
-from src.models.category import CategoryModel
-from src.models.product import ProductModel
+
 
 class ProductBody(BaseModel):
     name: str = Field(..., max_length=200)
@@ -56,18 +55,12 @@ class CategoryBaseBody(BaseModel):
 class CategoryBody(CategoryBaseBody):
     products: list[ProductBody] = Field(default_factory=list)
 
-    def to_model(self) -> CategoryModel:
-        category = CategoryModel(name=self.name, description=self.description)
-        category.products = [
-            ProductModel(
-                name=p.name,
-                description=p.description,
-                price=p.price,
-                quantity=p.quantity,
-            )
-            for p in self.products
-        ]
-        return category
+    @field_validator("products")
+    @classmethod
+    def validate_products(cls, v: list[ProductBody]) -> list[ProductBody]:
+        if not v:
+            raise ValidationException(field="products", message="Категория должна содержать хотя бы один товар")
+        return v
 
 
 class CategoryUpdateBody(CategoryBaseBody):
@@ -99,9 +92,9 @@ class CategoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     @classmethod
-    def from_model(cls, model: CategoryModel) -> "CategoryResponse":
+    def from_model(cls, model) -> "CategoryResponse":
         return cls.model_validate(model)
 
     @classmethod
-    def from_list(cls, models: list[CategoryModel]) -> list["CategoryResponse"]:
+    def from_list(cls, models) -> list["CategoryResponse"]:
         return [cls.model_validate(m) for m in models]

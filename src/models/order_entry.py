@@ -6,7 +6,7 @@ from uuid import UUID
 from src.models.base import Base
 
 class OrderEntryModel(Base):
-    __tablename__ = 'order_items'
+    __tablename__ = 'order_entries'
 
     order_id: Mapped[UUID] = mapped_column(
         ForeignKey("orders.id", ondelete="CASCADE"),
@@ -19,5 +19,5 @@ class OrderEntryModel(Base):
     quantity: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
     price: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), nullable=False)
 
-    order: Mapped["OrderModel"] = relationship(back_populates="order_items")
-    product: Mapped["ProductModel"] = relationship(back_populates="order_items")
+    order: Mapped["OrderModel"] = relationship(back_populates="order_entries")
+    product: Mapped["ProductModel"] = relationship(back_populates="order_entries")

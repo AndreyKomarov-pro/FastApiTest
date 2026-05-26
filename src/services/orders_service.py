@@ -1,7 +1,9 @@
 import logging
 from uuid import UUID
 from src.exceptions import NotFoundException
+from src.enums.order_status import OrderStatus
 from src.models.order import OrderModel
+from src.models.order_entry import OrderEntryModel
 from src.repositories.orders_repository import OrdersRepository
 from src.schemas.order import OrderCreate, OrderUpdate, OrderUpdateBody, OrderResponse
 from src.schemas.pagination import PageResponse
@@ -30,7 +32,18 @@ class OrdersService:
 
     async def create_order(self, data: OrderCreate) -> OrderResponse:
         logger.info("Creating order user_id=%s", data.body.user_id)
-        order = data.body.to_model()
+        order = OrderModel(
+            user_id=data.body.user_id,
+            status=OrderStatus.PENDING,
+        )
+        order.order_entries = [
+            OrderEntryModel(
+                product_id=item.product_id,
+                quantity=item.quantity,
+                price=item.price,
+            )
+            for item in data.body.items
+        ]
         result = await self.repo.create(order)
         return OrderResponse.from_model(result)
 

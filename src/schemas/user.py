@@ -3,8 +3,6 @@ from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 from src.exceptions.validation import ValidationException
-from src.models.user import UserModel
-from src.models.user_profile import UserProfile
 
 RF_PHONE_REGEX = re.compile(r'^(\+7|7|8)\d{10}$')
 
@@ -47,7 +45,10 @@ class UserBody(BaseModel):
     @classmethod
     def validate_email(cls, v: str) -> str:
         if isinstance(v, str):
-            return v.strip()
+            stripped = v.strip()
+            if not stripped:
+                raise ValidationException(field="email", message="Email не может быть пустым")
+            return stripped
         return v
 
     @field_validator("username")
@@ -64,19 +65,6 @@ class UserBody(BaseModel):
         if v is not None and not v.strip():
             raise ValidationException(field="full_name", message="Полное имя не может быть пустым если указано")
         return v.strip() if v else v
-
-    def to_model(self) -> UserModel:
-        user = UserModel(
-            username=self.username,
-            email=self.email,
-            full_name=self.full_name,
-        )
-        user.profile = UserProfile(
-            phone=self.profile.phone,
-            address=self.profile.address,
-            bio=self.profile.bio,
-        )
-        return user
 
 class UserProfileUpdateBody(BaseModel):
     phone: str | None = Field(default=None, max_length=20)
@@ -118,7 +106,10 @@ class UserUpdateBody(BaseModel):
     @classmethod
     def validate_email(cls, v: str | None) -> str | None:
         if isinstance(v, str):
-            return v.strip()
+            stripped = v.strip()
+            if not stripped:
+                raise ValidationException(field="email", message="Email не может быть пустым")
+            return stripped
         return v
 
     @field_validator("username")
@@ -137,20 +128,6 @@ class UserUpdateBody(BaseModel):
         if v is not None and not v.strip():
             raise ValidationException(field="full_name", message="Полное имя не может быть пустым если указано")
         return v.strip() if v else v
-
-    def apply_to(self, user: UserModel) -> None:
-        for key, value in self.model_dump(exclude_unset=True, exclude={"profile"}).items():
-            setattr(user, key, value)
-        if self.profile:
-            if user.profile:
-                for key, value in self.profile.model_dump(exclude_unset=True).items():
-                    setattr(user.profile, key, value)
-            else:
-                user.profile = UserProfile(
-                    phone=self.profile.phone,
-                    address=self.profile.address,
-                    bio=self.profile.bio,
-                )
 
 
 class UserCreate(BaseModel):
@@ -179,9 +156,9 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     @classmethod
-    def from_model(cls, model: UserModel) -> "UserResponse":
+    def from_model(cls, model) -> "UserResponse":
         return cls.model_validate(model)
 
     @classmethod
-    def from_list(cls, models: list[UserModel]) -> list["UserResponse"]:
+    def from_list(cls, models) -> list["UserResponse"]:
         return [cls.model_validate(m) for m in models]

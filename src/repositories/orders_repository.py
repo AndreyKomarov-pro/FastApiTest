@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from src.models.order import OrderModel
-from src.models.order_item import OrderEntryModel
+from src.models.order_entry import OrderEntryModel
 
 class OrdersRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -23,7 +23,7 @@ class OrdersRepository:
             select(OrderModel)
             .where(OrderModel.id.in_(select(subquery.c.id)))
             .options(
-                joinedload(OrderModel.order_items).joinedload(OrderEntryModel.product)
+                joinedload(OrderModel.order_entries).joinedload(OrderEntryModel.product)
             )
             .order_by(OrderModel.created_at.desc())
         )
@@ -34,7 +34,7 @@ class OrdersRepository:
             select(OrderModel)
             .where(OrderModel.id == order_id, OrderModel.is_deleted == False)
             .options(
-                joinedload(OrderModel.order_items).joinedload(OrderEntryModel.product)
+                joinedload(OrderModel.order_entries).joinedload(OrderEntryModel.product)
             )
         )
         return result.unique().scalar_one_or_none()
@@ -42,12 +42,12 @@ class OrdersRepository:
     async def create(self, order: OrderModel) -> OrderModel:
         self.session.add(order)
         await self.session.flush()
-        await self.session.refresh(order, attribute_names=["order_items"])
+        await self.session.refresh(order, attribute_names=["order_entries"])
         return order
 
     async def update(self, order: OrderModel) -> OrderModel:
         await self.session.flush()
-        await self.session.refresh(order, attribute_names=["order_items", "updated_at"])
+        await self.session.refresh(order, attribute_names=["order_entries", "updated_at"])
         return order
 
     async def delete(self, order: OrderModel) -> None:

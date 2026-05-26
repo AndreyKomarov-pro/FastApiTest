@@ -19,6 +19,6 @@ class ProductModel(Base):
     )
     category: Mapped["CategoryModel"] = relationship(back_populates="products")
 
-    order_items: Mapped[list["OrderEntryModel"]] = relationship(
+    order_entries: Mapped[list["OrderEntryModel"]] = relationship(
         back_populates="product",
     )

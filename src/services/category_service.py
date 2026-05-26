@@ -2,6 +2,7 @@ import logging
 from uuid import UUID
 from src.exceptions import NotFoundException
 from src.models.category import CategoryModel
+from src.models.product import ProductModel
 from src.repositories.category_repository import CategoryRepository
 from src.schemas.catalog import CategoryCreate, CategoryUpdate, CategoryUpdateBody, CategoryResponse
 from src.schemas.pagination import PageResponse
@@ -35,7 +36,16 @@ class CategoryService:
 
     async def create_category(self, data: CategoryCreate) -> CategoryResponse:
         logger.info("Creating category name=%s", data.body.name)
-        category = data.body.to_model()
+        category = CategoryModel(name=data.body.name, description=data.body.description)
+        category.products = [
+            ProductModel(
+                name=p.name,
+                description=p.description,
+                price=p.price,
+                quantity=p.quantity,
+            )
+            for p in data.body.products
+        ]
         result = await self.repo.create(category)
         return CategoryResponse.from_model(result)
 
