@@ -82,6 +82,13 @@ class ProductResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class EnrichedProductResponse(ProductResponse):
+    rating: Decimal | None = None
+    reviews_count: int | None = None
+    warehouse_stock: int | None = None
+
+
 class CategoryResponse(BaseModel):
     id: UUID
     name: str
@@ -98,3 +105,41 @@ class CategoryResponse(BaseModel):
     @classmethod
     def from_list(cls, models) -> list["CategoryResponse"]:
         return [cls.model_validate(m) for m in models]
+
+
+class EnrichedCategoryResponse(BaseModel):
+    id: UUID
+    name: str
+    description: str | None
+    created_at: datetime
+    products: list[EnrichedProductResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @classmethod
+    def from_category(
+        cls, category: CategoryResponse, product_infos: dict
+    ) -> "EnrichedCategoryResponse":
+        enriched_products = []
+        for p in category.products:
+            info = product_infos.get(str(p.id))
+            enriched_products.append(
+                EnrichedProductResponse(
+                    id=p.id,
+                    name=p.name,
+                    description=p.description,
+                    price=p.price,
+                    quantity=p.quantity,
+                    created_at=p.created_at,
+                    rating=info.rating if info else None,
+                    reviews_count=info.reviews_count if info else None,
+                    warehouse_stock=info.warehouse_stock if info else None,
+                )
+            )
+        return cls(
+            id=category.id,
+            name=category.name,
+            description=category.description,
+            created_at=category.created_at,
+            products=enriched_products,
+        )

@@ -2,7 +2,12 @@ from uuid import UUID
 from http import HTTPStatus
 from fastapi import APIRouter, Depends, Query
 from src.dependencies import get_category_service
-from src.schemas.catalog import CategoryCreate, CategoryUpdate, CategoryResponse
+from src.schemas.catalog import (
+    CategoryCreate,
+    CategoryUpdate,
+    CategoryResponse,
+    EnrichedCategoryResponse,
+)
 from src.schemas.pagination import PageResponse
 from src.services.category_service import CategoryService
 
@@ -16,18 +21,18 @@ async def list_categories(
 ) -> PageResponse[CategoryResponse]:
     return await service.get_categories(page, size)
 
-@router.get("/categories/{category_id}", response_model=CategoryResponse)
+@router.get("/categories/{category_id}", response_model=EnrichedCategoryResponse)
 async def get_category(
     category_id: UUID,
     service: CategoryService = Depends(get_category_service),
-) -> CategoryResponse:
+) -> EnrichedCategoryResponse:
     return await service.get_category_by_id(category_id)
 
-@router.post("/categories/", response_model=CategoryResponse, status_code=HTTPStatus.CREATED)
+@router.post("/categories/", response_model=EnrichedCategoryResponse, status_code=HTTPStatus.CREATED)
 async def create_category(
     data: CategoryCreate,
     service: CategoryService = Depends(get_category_service),
-) -> CategoryResponse:
+) -> EnrichedCategoryResponse:
     return await service.create_category(data)
 
 @router.put("/categories/{category_id}", response_model=CategoryResponse)
