@@ -1,4 +1,5 @@
-import ujson
+import json
+
 import redis.asyncio as redis
 
 CACHE_TTL = 3600
@@ -12,10 +13,10 @@ class CacheService:
         data = await self.redis.get(key)
         if data is None:
             return None
-        return ujson.loads(data)
+        return json.loads(data)
 
     async def set(self, key: str, value: dict | list) -> None:
-        await self.redis.set(key, ujson.dumps(value), ex=CACHE_TTL)
+        await self.redis.set(key, json.dumps(value), ex=CACHE_TTL)
 
     async def delete(self, key: str) -> None:
         await self.redis.delete(key)
