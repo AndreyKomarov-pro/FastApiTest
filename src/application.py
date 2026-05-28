@@ -3,7 +3,7 @@ import time
 import uuid
 
 from fastapi import FastAPI
-from fastapi.responses import UJSONResponse
+from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -37,7 +37,7 @@ def get_app() -> FastAPI:
         title="Internet Shop API",
         docs_url="/docs",
         openapi_url="/openapi.json",
-        default_response_class=UJSONResponse,
+        default_response_class=JSONResponse,
     )
 
     app.add_middleware(
