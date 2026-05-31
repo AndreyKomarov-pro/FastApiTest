@@ -1,13 +1,11 @@
 from decimal import Decimal
-from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.cache.cache_service import CacheService
 from src.exceptions import NotFoundException
 from src.repositories.category_repository import CategoryRepository
-from src.schemas.catalog import CategoryCreate, CategoryBody, ProductBody
+from src.schemas.catalog import CategoryCreate, CategoryBody, CategoryUpdate, CategoryUpdateBody, ProductBody
 from src.services.category_service import CategoryService
 
 
@@ -62,7 +60,6 @@ async def test_get_category_by_id(category_service, category_data, mock_product_
 
 
 async def test_get_category_not_found(category_service):
-    from uuid import uuid4
     with pytest.raises(NotFoundException):
         await category_service.get_category_by_id(uuid4())
 
@@ -70,7 +67,6 @@ async def test_get_category_not_found(category_service):
 async def test_update_category(category_service, category_data, mock_product_info_client):
     mock_product_info_client.create_product_info.return_value = None
     created = await category_service.create_category(category_data)
-    from src.schemas.catalog import CategoryUpdate, CategoryUpdateBody
     update_data = CategoryUpdate(
         body=CategoryUpdateBody(name="Updated Name", description="Updated desc")
     )

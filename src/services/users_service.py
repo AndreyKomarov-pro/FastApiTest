@@ -1,7 +1,7 @@
 import logging
 from uuid import UUID
 
-from src.cache.cache_service import CacheService
+from src.cache.redis_client import RedisClient
 from src.exceptions import NotFoundException
 from src.models.user import UserModel
 from src.models.user_profile import UserProfile
@@ -16,7 +16,7 @@ USER_KEY = "user:{user_id}"
 
 
 class UsersService:
-    def __init__(self, repo: UserRepository, cache: CacheService) -> None:
+    def __init__(self, repo: UserRepository, cache: RedisClient) -> None:
         self.repo = repo
         self.cache = cache
 
@@ -29,7 +29,7 @@ class UsersService:
     async def get_users(self, page: int, size: int) -> PageResponse[UserResponse]:
         logger.debug("Listing users page=%s size=%s", page, size)
         cache_key = USERS_LIST_KEY.format(page=page, size=size)
-        cached = await self.cache.get(cache_key)
+        cached = await self.cache.get_cached(cache_key)
         if cached:
             return PageResponse[UserResponse].model_validate(cached)
         offset = (page - 1) * size
@@ -39,7 +39,7 @@ class UsersService:
             page=page,
             size=size,
         )
-        await self.cache.set(cache_key, result.model_dump(mode="json"))
+        await self.cache.set_cached(cache_key, result.model_dump(mode="json"))
         return result
 
     async def create_user(self, data: UserCreate) -> UserResponse:
@@ -55,7 +55,7 @@ class UsersService:
             bio=data.body.profile.bio,
         )
         result = await self.repo.create(user)
-        await self.cache.delete_pattern("users:*")
+        await self.cache.delete_cached_pattern("users:*")
         return UserResponse.from_model(result)
 
     async def update_user(self, user_id: UUID, data: UserUpdate) -> UserResponse:
@@ -63,8 +63,8 @@ class UsersService:
         user = await self._get_user_orm(user_id)
         self._apply_update(user, data.body)
         result = await self.repo.update(user)
-        await self.cache.delete_pattern("users:*")
-        await self.cache.delete(USER_KEY.format(user_id=user_id))
+        await self.cache.delete_cached_pattern("users:*")
+        await self.cache.delete_cached(USER_KEY.format(user_id=user_id))
         return UserResponse.from_model(result)
 
     @staticmethod
@@ -86,5 +86,5 @@ class UsersService:
         logger.info("Deleting user id=%s", user_id)
         user = await self._get_user_orm(user_id)
         await self.repo.delete(user)
-        await self.cache.delete_pattern("users:*")
-        await self.cache.delete(USER_KEY.format(user_id=user_id))
+        await self.cache.delete_cached_pattern("users:*")
+        await self.cache.delete_cached(USER_KEY.format(user_id=user_id))

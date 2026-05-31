@@ -1,9 +1,7 @@
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.cache.cache_service import CacheService
 from src.exceptions import NotFoundException
 from src.repositories.user_repository import UserRepository
 from src.schemas.user import (

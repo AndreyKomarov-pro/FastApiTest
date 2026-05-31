@@ -1,7 +1,7 @@
 import logging
 from uuid import UUID
 
-from src.cache.cache_service import CacheService
+from src.cache.redis_client import RedisClient
 from src.enums.order_status import OrderStatus
 from src.exceptions import NotFoundException
 from src.models.order import OrderModel
@@ -17,7 +17,7 @@ ORDER_KEY = "order:{order_id}"
 
 
 class OrdersService:
-    def __init__(self, repo: OrdersRepository, cache: CacheService) -> None:
+    def __init__(self, repo: OrdersRepository, cache: RedisClient) -> None:
         self.repo = repo
         self.cache = cache
 
@@ -30,7 +30,7 @@ class OrdersService:
     async def get_orders(self, page: int, size: int) -> PageResponse[OrderResponse]:
         logger.debug("Listing orders page=%s size=%s", page, size)
         cache_key = ORDERS_LIST_KEY.format(page=page, size=size)
-        cached = await self.cache.get(cache_key)
+        cached = await self.cache.get_cached(cache_key)
         if cached:
             return PageResponse[OrderResponse].model_validate(cached)
         offset = (page - 1) * size
@@ -40,7 +40,7 @@ class OrdersService:
             page=page,
             size=size,
         )
-        await self.cache.set(cache_key, result.model_dump(mode="json"))
+        await self.cache.set_cached(cache_key, result.model_dump(mode="json"))
         return result
 
     async def create_order(self, data: OrderCreate) -> OrderResponse:
@@ -58,7 +58,7 @@ class OrdersService:
             for item in data.body.items
         ]
         result = await self.repo.create(order)
-        await self.cache.delete_pattern("orders:*")
+        await self.cache.delete_cached_pattern("orders:*")
         return OrderResponse.from_model(result)
 
     async def update_order(self, order_id: UUID, data: OrderUpdate) -> OrderResponse:
@@ -66,16 +66,16 @@ class OrdersService:
         order = await self._get_order_orm(order_id)
         self._update_fields(order, data.body)
         result = await self.repo.update(order)
-        await self.cache.delete_pattern("orders:*")
-        await self.cache.delete(ORDER_KEY.format(order_id=order_id))
+        await self.cache.delete_cached_pattern("orders:*")
+        await self.cache.delete_cached(ORDER_KEY.format(order_id=order_id))
         return OrderResponse.from_model(result)
 
     async def delete_order(self, order_id: UUID) -> None:
         logger.info("Deleting order id=%s", order_id)
         order = await self._get_order_orm(order_id)
         await self.repo.delete(order)
-        await self.cache.delete_pattern("orders:*")
-        await self.cache.delete(ORDER_KEY.format(order_id=order_id))
+        await self.cache.delete_cached_pattern("orders:*")
+        await self.cache.delete_cached(ORDER_KEY.format(order_id=order_id))
 
     @staticmethod
     def _update_fields(order: OrderModel, fields: OrderUpdateBody) -> None:

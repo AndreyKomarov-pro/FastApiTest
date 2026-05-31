@@ -2,9 +2,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.cache.cache_service import CacheService
 from src.enums.order_status import OrderStatus
 from src.exceptions import NotFoundException
 from src.models.user import UserModel
