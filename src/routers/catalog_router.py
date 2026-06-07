@@ -28,11 +28,11 @@ async def get_category(
 ) -> EnrichedCategoryResponse:
     return await service.get_category_by_id(category_id)
 
-@router.post("/categories/", response_model=EnrichedCategoryResponse, status_code=HTTPStatus.CREATED)
+@router.post("/categories/", response_model=CategoryResponse, status_code=HTTPStatus.CREATED)
 async def create_category(
     data: CategoryCreate,
     service: CategoryService = Depends(get_category_service),
-) -> EnrichedCategoryResponse:
+) -> CategoryResponse:
     return await service.create_category(data)
 
 @router.put("/categories/{category_id}", response_model=CategoryResponse)

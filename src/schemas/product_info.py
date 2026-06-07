@@ -8,6 +8,7 @@ class ProductInfoBody(BaseModel):
     rating: Decimal
     reviews_count: int
     warehouse_stock: int
+    idempotency_key: UUID | None = None
 
 
 class ProductInfoResponse(BaseModel):

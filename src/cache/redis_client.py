@@ -1,4 +1,5 @@
 import json
+from typing import Any, Optional
 
 import redis.asyncio as redis
 
@@ -22,13 +23,13 @@ class RedisClient:
     def __init__(self, client: redis.Redis) -> None:
         self._redis = client
 
-    async def get_cached(self, key: str) -> dict | list | None:
+    async def get_cached(self, key: str) -> Optional[dict[str, Any] | list[Any]]:
         data = await self._redis.get(key)
         if data is None:
             return None
         return json.loads(data)
 
-    async def set_cached(self, key: str, value: dict | list) -> None:
+    async def set_cached(self, key: str, value: dict[str, Any] | list[Any]) -> None:
         await self._redis.set(key, json.dumps(value), ex=CACHE_TTL)
 
     async def delete_cached(self, key: str) -> None:

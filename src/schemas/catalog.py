@@ -93,6 +93,7 @@ class CategoryResponse(BaseModel):
     id: UUID
     name: str
     description: str | None
+    status: str
     created_at: datetime
     products: list[ProductResponse] = []
 
@@ -117,11 +118,9 @@ class EnrichedCategoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     @classmethod
-    def from_category(
-        cls, category: CategoryResponse, product_infos: dict
-    ) -> "EnrichedCategoryResponse":
+    def from_model(cls, model, product_infos: dict) -> "EnrichedCategoryResponse":
         enriched_products = []
-        for p in category.products:
+        for p in model.products:
             info = product_infos.get(str(p.id))
             enriched_products.append(
                 EnrichedProductResponse(
@@ -137,9 +136,9 @@ class EnrichedCategoryResponse(BaseModel):
                 )
             )
         return cls(
-            id=category.id,
-            name=category.name,
-            description=category.description,
-            created_at=category.created_at,
+            id=model.id,
+            name=model.name,
+            description=model.description,
+            created_at=model.created_at,
             products=enriched_products,
         )

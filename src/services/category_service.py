@@ -1,10 +1,13 @@
+import json
 import logging
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from src.cache.redis_client import RedisClient
 from src.clients.product_info_client import ProductInfoClient
+from src.enums.category_status import CategoryStatus
 from src.exceptions import NotFoundException
+from src.exceptions.service_unavailable import ServiceUnavailableException
 from src.models.category import CategoryModel
 from src.models.product import ProductModel
 from src.repositories.category_repository import CategoryRepository
@@ -64,19 +67,23 @@ class CategoryService:
         if cached:
             return EnrichedCategoryResponse.model_validate(cached)
         category = await self._get_category_orm(category_id)
-        category_response = CategoryResponse.from_model(category)
         product_infos = {}
-        for product in category_response.products:
+        for product in category.products:
             info = await self.product_info_client.get_product_info(str(product.id))
-            if info:
-                product_infos[str(product.id)] = info
-        enriched = EnrichedCategoryResponse.from_category(category_response, product_infos)
+            product_infos[str(product.id)] = info
+        enriched = EnrichedCategoryResponse.from_model(category, product_infos)
         await self.cache.set_cached(cache_key, enriched.model_dump(mode="json"))
         return enriched
 
-    async def create_category(self, data: CategoryCreate) -> EnrichedCategoryResponse:
+    async def create_category(self, data: CategoryCreate) -> CategoryResponse:
         logger.info("Creating category name=%s", data.body.name)
-        category = CategoryModel(name=data.body.name, description=data.body.description)
+        idempotency_key = uuid4()
+        category = CategoryModel(
+            name=data.body.name,
+            description=data.body.description,
+            status=CategoryStatus.PENDING,
+            idempotency_key=idempotency_key,
+        )
         category.products = [
             ProductModel(
                 name=p.name,
@@ -87,21 +94,38 @@ class CategoryService:
             for p in data.body.products
         ]
         result = await self.repo.create(category)
-        category_response = CategoryResponse.from_model(result)
-        product_infos = {}
-        for product in category_response.products:
-            info = await self.product_info_client.create_product_info(
-                ProductInfoBody(
-                    product_id=product.id,
-                    rating=Decimal("0"),
-                    reviews_count=0,
-                    warehouse_stock=product.quantity,
+        payload = [
+            ProductInfoBody(
+                product_id=product.id,
+                rating=Decimal("0"),
+                reviews_count=0,
+                warehouse_stock=product.quantity,
+                idempotency_key=idempotency_key,
+            ).model_dump(mode="json")
+            for product in result.products
+        ]
+        result.payload_json = json.dumps(payload)
+        await self.repo.update(result)
+
+        try:
+            for item in payload:
+                await self.product_info_client.create_product_info(
+                    ProductInfoBody.model_validate(item)
                 )
+            await self.repo.update_status(
+                result.id, CategoryStatus.CONFIRMED, expected_status=CategoryStatus.PENDING
             )
-            if info:
-                product_infos[str(product.id)] = info
-        await self.cache.delete_cached_pattern("categories:*")
-        return EnrichedCategoryResponse.from_category(category_response, product_infos)
+            result.status = CategoryStatus.CONFIRMED
+        except ServiceUnavailableException:
+            logger.warning("External service unavailable, category %s stays PENDING", result.id)
+        except Exception:
+            await self.repo.update_status(
+                result.id, CategoryStatus.ERROR, expected_status=CategoryStatus.PENDING,
+                last_error="Unexpected error during product info creation",
+            )
+            raise
+
+        return CategoryResponse.from_model(result)
 
     async def update_category(self, category_id: UUID, data: CategoryUpdate) -> CategoryResponse:
         logger.info("Updating category id=%s", category_id)
