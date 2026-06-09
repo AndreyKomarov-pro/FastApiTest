@@ -7,7 +7,6 @@ from src.cache.redis_client import RedisClient
 from src.clients.product_info_client import ProductInfoClient
 from src.enums.category_status import CategoryStatus
 from src.exceptions import NotFoundException
-from src.exceptions.service_unavailable import ServiceUnavailableException
 from src.models.category import CategoryModel
 from src.models.product import ProductModel
 from src.repositories.category_repository import CategoryRepository
@@ -106,25 +105,6 @@ class CategoryService:
         ]
         result.payload_json = json.dumps(payload)
         await self.repo.update(result)
-
-        try:
-            for item in payload:
-                await self.product_info_client.create_product_info(
-                    ProductInfoBody.model_validate(item)
-                )
-            await self.repo.update_status(
-                result.id, CategoryStatus.CONFIRMED, expected_status=CategoryStatus.PENDING
-            )
-            result.status = CategoryStatus.CONFIRMED
-        except ServiceUnavailableException:
-            logger.warning("External service unavailable, category %s stays PENDING", result.id)
-        except Exception:
-            await self.repo.update_status(
-                result.id, CategoryStatus.ERROR, expected_status=CategoryStatus.PENDING,
-                last_error="Unexpected error during product info creation",
-            )
-            raise
-
         return CategoryResponse.from_model(result)
 
     async def update_category(self, category_id: UUID, data: CategoryUpdate) -> CategoryResponse:
@@ -133,13 +113,22 @@ class CategoryService:
         self._update_fields(category, data.body)
         result = await self.repo.update(category)
         await self.cache.delete_cached_pattern("categories:*")
-        await self.cache.delete_cached(CATEGORY_KEY.format(category_id=category_id))
+        product_infos = {}
+        for product in result.products:
+            info = await self.product_info_client.get_product_info(str(product.id))
+            product_infos[str(product.id)] = info
+        enriched = EnrichedCategoryResponse.from_model(result, product_infos)
+        cache_key = CATEGORY_KEY.format(category_id=category_id)
+        await self.cache.set_cached(cache_key, enriched.model_dump(mode="json"))
         return CategoryResponse.from_model(result)
 
     async def delete_category(self, category_id: UUID) -> None:
         logger.info("Deleting category id=%s", category_id)
         category = await self._get_category_orm(category_id)
         await self.repo.delete(category)
+        await self._invalidate_category_cache(category_id)
+
+    async def _invalidate_category_cache(self, category_id: UUID) -> None:
         await self.cache.delete_cached_pattern("categories:*")
         await self.cache.delete_cached(CATEGORY_KEY.format(category_id=category_id))
 

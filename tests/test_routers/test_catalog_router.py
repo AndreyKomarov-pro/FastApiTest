@@ -59,6 +59,7 @@ async def test_get_category_not_found(client: AsyncClient):
 
 async def test_update_category(client: AsyncClient, category_payload, mock_product_info_client):
     mock_product_info_client.create_product_info.return_value = None
+    mock_product_info_client.get_product_info.return_value = None
     create_resp = await client.post("/api/v1/categories/", json=category_payload)
     category_id = create_resp.json()["id"]
     update_payload = {"body": {"name": "Updated", "description": "Updated desc"}}

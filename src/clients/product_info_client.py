@@ -5,6 +5,7 @@ import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
 from src.config import Settings
+from src.enums.retryable_status import RetryableStatus
 from src.exceptions.not_found import NotFoundException
 from src.exceptions.service_unavailable import ServiceUnavailableException
 from src.schemas.product_info import ProductInfoBody, ProductInfoResponse
@@ -17,12 +18,6 @@ MAX_RETRIES = 3
 BASE_DELAY = 0.5
 MAX_DELAY = 10.0
 REQUEST_TIMEOUT = 5.0
-
-RETRYABLE_STATUSES = {
-    HTTPStatus.REQUEST_TIMEOUT,
-    HTTPStatus.TOO_MANY_REQUESTS,
-}
-
 
 class _RetryableStatus(Exception):
     pass
@@ -46,13 +41,18 @@ class ProductInfoClient:
         self.base_url = str(settings.product_info_service_url)
 
     async def get_product_info(self, product_id: str) -> ProductInfoResponse:
+        logger.info("Fetching product info for product_id=%s", product_id)
         response = await self._get(f"/api/v1/products/{product_id}/info")
         if response.status_code == HTTPStatus.NOT_FOUND:
+            logger.warning("Product info not found for product_id=%s", product_id)
             raise NotFoundException("ProductInfo", product_id)
+        logger.info("Product info fetched for product_id=%s", product_id)
         return ProductInfoResponse.model_validate(response.json())
 
     async def create_product_info(self, data: ProductInfoBody) -> ProductInfoResponse:
+        logger.info("Creating product info for product_id=%s", data.product_id)
         response = await self._post("/api/v1/products/info", json=data.model_dump(mode="json"))
+        logger.info("Product info created for product_id=%s", data.product_id)
         return ProductInfoResponse.model_validate(response.json())
 
     @_retry
@@ -71,6 +71,6 @@ class ProductInfoClient:
 
     @staticmethod
     def _check_retryable(response: httpx.Response) -> None:
-        if response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR or response.status_code in RETRYABLE_STATUSES:
+        if response.status_code in RetryableStatus:
             logger.warning("Retryable status %s for %s %s", response.status_code, response.request.method, response.request.url)
             raise _RetryableStatus(str(response.status_code))

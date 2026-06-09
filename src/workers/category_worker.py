@@ -4,6 +4,8 @@ import logging
 import random
 from datetime import datetime, timedelta, timezone
 
+import httpx
+
 from src.clients.product_info_client import ProductInfoClient
 from src.database import SessionFactory
 from src.enums.category_status import CategoryStatus
@@ -59,6 +61,15 @@ async def _increment_retry(
         await repo.increment_retry(category_id, next_retry_at, last_error=last_error)
 
 
+RETRYABLE_EXCEPTIONS = (
+    ServiceUnavailableException,
+    httpx.ConnectError,
+    httpx.TimeoutException,
+    asyncio.TimeoutError,
+    ConnectionError,
+)
+
+
 async def _process_category(
     client: ProductInfoClient,
     category: CategoryModel,
@@ -70,9 +81,11 @@ async def _process_category(
             await _update_status(category.id, CategoryStatus.CONFIRMED)
             logger.info("Category %s confirmed", category.id)
             return
-        except ServiceUnavailableException as exc:
-            error_msg = str(exc)
         except NotFoundException as exc:
+            await _update_status(category.id, CategoryStatus.CANCELLED, last_error=str(exc))
+            logger.warning("Category %s cancelled: %s", category.id, exc)
+            return
+        except RETRYABLE_EXCEPTIONS as exc:
             error_msg = str(exc)
         except Exception as exc:
             await _update_status(category.id, CategoryStatus.ERROR, last_error=str(exc))
@@ -120,7 +133,10 @@ async def category_worker() -> None:
                     _process_category(client, cat, semaphore)
                     for cat in categories
                 ]
-                await asyncio.gather(*tasks, return_exceptions=True)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for cat, result in zip(categories, results):
+                    if isinstance(result, Exception):
+                        logger.error("Task for category %s failed: %s", cat.id, result)
 
         except Exception as exc:
             logger.error("Category worker error: %s", exc)
