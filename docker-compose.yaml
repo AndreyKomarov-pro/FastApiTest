@@ -53,17 +53,6 @@ services:
     env_file:
       - .env
 
-  product_info_service:
-    build:
-      context: ../ProductInfoService
-    ports:
-      - "8001:8001"
-    depends_on:
-      postgres_product_info:
-        condition: service_healthy
-    env_file:
-      - ../ProductInfoService/.env
-
 volumes:
   postgres_data:
   postgres_product_info_data:

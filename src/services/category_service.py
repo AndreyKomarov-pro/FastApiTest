@@ -46,7 +46,7 @@ class CategoryService:
     async def get_categories(self, page: int, size: int) -> PageResponse[CategoryResponse]:
         logger.debug("Listing categories page=%s size=%s", page, size)
         cache_key = CATEGORIES_LIST_KEY.format(page=page, size=size)
-        cached = await self.cache.get_cached(cache_key)
+        cached = await self._get_cached(cache_key)
         if cached:
             return PageResponse[CategoryResponse].model_validate(cached)
         offset = (page - 1) * size
@@ -56,13 +56,13 @@ class CategoryService:
             page=page,
             size=size,
         )
-        await self.cache.set_cached(cache_key, result.model_dump(mode="json"))
+        await self._set_cached(cache_key, result.model_dump(mode="json"))
         return result
 
     async def get_category_by_id(self, category_id: UUID) -> EnrichedCategoryResponse:
         logger.debug("Fetching category id=%s", category_id)
         cache_key = CATEGORY_KEY.format(category_id=category_id)
-        cached = await self.cache.get_cached(cache_key)
+        cached = await self._get_cached(cache_key)
         if cached:
             return EnrichedCategoryResponse.model_validate(cached)
         category = await self._get_category_orm(category_id)
@@ -71,7 +71,7 @@ class CategoryService:
             info = await self.product_info_client.get_product_info(str(product.id))
             product_infos[str(product.id)] = info
         enriched = EnrichedCategoryResponse.from_model(category, product_infos)
-        await self.cache.set_cached(cache_key, enriched.model_dump(mode="json"))
+        await self._set_cached(cache_key, enriched.model_dump(mode="json"))
         return enriched
 
     async def create_category(self, data: CategoryCreate) -> CategoryResponse:
@@ -93,34 +93,38 @@ class CategoryService:
             for p in data.body.products
         ]
         result = await self.repo.create(category)
-        payload = [
-            ProductInfoBody(
-                product_id=product.id,
-                rating=Decimal("0"),
-                reviews_count=0,
-                warehouse_stock=product.quantity,
-                idempotency_key=idempotency_key,
-            ).model_dump(mode="json")
-            for product in result.products
-        ]
+        payload = self._build_payload(result.products, idempotency_key)
         result.payload_json = json.dumps(payload)
         await self.repo.update(result)
         return CategoryResponse.from_model(result)
 
-    async def update_category(self, category_id: UUID, data: CategoryUpdate) -> CategoryResponse:
+    async def update_category(self, category_id: UUID, data: CategoryUpdate) -> EnrichedCategoryResponse:
         logger.info("Updating category id=%s", category_id)
+        cache_key = CATEGORY_KEY.format(category_id=category_id)
+        cached = await self._get_cached(cache_key)
         category = await self._get_category_orm(category_id)
         self._update_fields(category, data.body)
         result = await self.repo.update(category)
-        await self.cache.delete_cached_pattern("categories:*")
-        product_infos = {}
-        for product in result.products:
-            info = await self.product_info_client.get_product_info(str(product.id))
-            product_infos[str(product.id)] = info
-        enriched = EnrichedCategoryResponse.from_model(result, product_infos)
-        cache_key = CATEGORY_KEY.format(category_id=category_id)
-        await self.cache.set_cached(cache_key, enriched.model_dump(mode="json"))
-        return CategoryResponse.from_model(result)
+        if cached:
+            old_enriched = EnrichedCategoryResponse.model_validate(cached)
+            enriched = EnrichedCategoryResponse(
+                id=result.id,
+                name=result.name,
+                description=result.description,
+                created_at=result.created_at,
+                products=old_enriched.products,
+            )
+        else:
+            enriched = EnrichedCategoryResponse(
+                id=result.id,
+                name=result.name,
+                description=result.description,
+                created_at=result.created_at,
+                products=[],
+            )
+        await self._set_cached(cache_key, enriched.model_dump(mode="json"))
+        await self._delete_cached_pattern("categories:*")
+        return enriched
 
     async def delete_category(self, category_id: UUID) -> None:
         logger.info("Deleting category id=%s", category_id)
@@ -129,8 +133,46 @@ class CategoryService:
         await self._invalidate_category_cache(category_id)
 
     async def _invalidate_category_cache(self, category_id: UUID) -> None:
-        await self.cache.delete_cached_pattern("categories:*")
-        await self.cache.delete_cached(CATEGORY_KEY.format(category_id=category_id))
+        await self._delete_cached_pattern("categories:*")
+        await self._delete_cached(CATEGORY_KEY.format(category_id=category_id))
+
+    async def _get_cached(self, key: str):
+        try:
+            return await self.cache.get_cached(key)
+        except Exception:
+            logger.warning("Cache get failed for key=%s", key)
+            return None
+
+    async def _set_cached(self, key: str, value) -> None:
+        try:
+            await self.cache.set_cached(key, value)
+        except Exception:
+            logger.warning("Cache set failed for key=%s", key)
+
+    async def _delete_cached(self, key: str) -> None:
+        try:
+            await self.cache.delete_cached(key)
+        except Exception:
+            logger.warning("Cache delete failed for key=%s", key)
+
+    async def _delete_cached_pattern(self, pattern: str) -> None:
+        try:
+            await self.cache.delete_cached_pattern(pattern)
+        except Exception:
+            logger.warning("Cache delete pattern failed for pattern=%s", pattern)
+
+    @staticmethod
+    def _build_payload(products: list[ProductModel], idempotency_key: UUID) -> list[dict]:
+        return [
+            ProductInfoBody(
+                product_id=product.id,
+                rating=Decimal("0"),
+                reviews_count=0,
+                warehouse_stock=product.quantity,
+                idempotency_key=idempotency_key,
+            ).model_dump(mode="json")
+            for product in products
+        ]
 
     @staticmethod
     def _update_fields(category: CategoryModel, fields: CategoryUpdateBody) -> None:

@@ -96,25 +96,20 @@ async def test_delete_category(category_service, category_data, mock_product_inf
 async def test_get_category_by_id_returns_cached(category_service, category_data, mock_product_info_client, product_info_response):
     mock_product_info_client.get_product_info.return_value = product_info_response
     created = await category_service.create_category(category_data)
-    spy_set = AsyncMock(wraps=category_service.cache.set_cached)
-    spy_get = AsyncMock(wraps=category_service.cache.get_cached)
-    category_service.cache.set_cached = spy_set
-    category_service.cache.get_cached = spy_get
     await category_service.get_category_by_id(created.id)
-    spy_set.assert_called_once()
-    spy_get.reset_mock()
     await category_service.get_category_by_id(created.id)
-    spy_get.assert_called_once()
     mock_product_info_client.get_product_info.assert_called_once()
 
 
 async def test_update_sets_cache(category_service, category_data, mock_product_info_client, product_info_response):
     mock_product_info_client.get_product_info.return_value = product_info_response
     created = await category_service.create_category(category_data)
-    await category_service.update_category(
+    await category_service.get_category_by_id(created.id)
+    mock_product_info_client.get_product_info.reset_mock()
+    result = await category_service.update_category(
         created.id, CategoryUpdate(body=CategoryUpdateBody(name="New Name"))
     )
-    mock_product_info_client.get_product_info.reset_mock()
-    result = await category_service.get_category_by_id(created.id)
     assert result.name == "New Name"
+    cached_result = await category_service.get_category_by_id(created.id)
+    assert cached_result.name == "New Name"
     mock_product_info_client.get_product_info.assert_not_called()

@@ -9,6 +9,18 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     product_info_service_url: str = "http://localhost:8001"
 
+    client_max_retries: int = 3
+    client_base_delay: float = 0.5
+    client_max_delay: float = 10.0
+    client_request_timeout: float = 5.0
+
+    worker_interval: int = 10
+    worker_batch_size: int = 10
+    worker_max_retries: int = 5
+    worker_base_backoff: int = 2
+    worker_max_backoff: int = 300
+    worker_semaphore_limit: int = 5
+
     class Config:
         env_file = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),

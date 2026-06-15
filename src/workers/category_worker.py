@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 
 from src.clients.product_info_client import ProductInfoClient
+from src.config import Settings
 from src.database import SessionFactory
 from src.enums.category_status import CategoryStatus
 from src.exceptions.not_found import NotFoundException
@@ -17,16 +18,11 @@ from src.schemas.product_info import ProductInfoBody
 
 logger = logging.getLogger(__name__)
 
-WORKER_INTERVAL = 10
-BATCH_SIZE = 10
-MAX_RETRIES = 5
-BASE_BACKOFF = 2
-MAX_BACKOFF = 300
-SEMAPHORE_LIMIT = 5
+settings = Settings()
 
 
 def _calc_next_retry_at(retry_count: int) -> datetime:
-    backoff = min(BASE_BACKOFF * (2 ** retry_count), MAX_BACKOFF)
+    backoff = min(settings.worker_base_backoff * (2 ** retry_count), settings.worker_max_backoff)
     jitter = random.uniform(0, backoff * 0.1)
     return datetime.now(timezone.utc) + timedelta(seconds=backoff + jitter)
 
@@ -48,6 +44,7 @@ async def _update_status(
     async with SessionFactory() as session:
         repo = CategoryRepository(session)
         await repo.update_status(category_id, status, expected_status=CategoryStatus.PENDING, last_error=last_error)
+        await session.commit()
 
 
 async def _increment_retry(
@@ -59,6 +56,7 @@ async def _increment_retry(
         repo = CategoryRepository(session)
         next_retry_at = _calc_next_retry_at(retry_count)
         await repo.increment_retry(category_id, next_retry_at, last_error=last_error)
+        await session.commit()
 
 
 RETRYABLE_EXCEPTIONS = (
@@ -92,7 +90,7 @@ async def _process_category(
             logger.error("Category %s marked ERROR: %s", category.id, exc)
             return
 
-        if category.retry_count >= MAX_RETRIES:
+        if category.retry_count >= settings.worker_max_retries:
             await _final_check(client, category, error_msg)
             return
 
@@ -125,10 +123,10 @@ async def category_worker() -> None:
         try:
             async with SessionFactory() as session:
                 repo = CategoryRepository(session)
-                categories = await repo.claim_pending(BATCH_SIZE)
+                categories = await repo.claim_pending(settings.worker_batch_size)
 
             if categories:
-                semaphore = asyncio.Semaphore(SEMAPHORE_LIMIT)
+                semaphore = asyncio.Semaphore(settings.worker_semaphore_limit)
                 tasks = [
                     _process_category(client, cat, semaphore)
                     for cat in categories
@@ -141,4 +139,4 @@ async def category_worker() -> None:
         except Exception as exc:
             logger.error("Category worker error: %s", exc)
 
-        await asyncio.sleep(WORKER_INTERVAL)
+        await asyncio.sleep(settings.worker_interval)

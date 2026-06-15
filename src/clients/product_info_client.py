@@ -7,6 +7,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from src.config import Settings
 from src.enums.retryable_status import RetryableStatus
 from src.exceptions.not_found import NotFoundException
+from src.exceptions.retryable_status import RetryableStatusException
 from src.exceptions.service_unavailable import ServiceUnavailableException
 from src.schemas.product_info import ProductInfoBody, ProductInfoResponse
 
@@ -14,23 +15,15 @@ logger = logging.getLogger(__name__)
 
 settings = Settings()
 
-MAX_RETRIES = 3
-BASE_DELAY = 0.5
-MAX_DELAY = 10.0
-REQUEST_TIMEOUT = 5.0
-
-class _RetryableStatus(Exception):
-    pass
-
 
 def _on_give_up(retry_state):
     raise ServiceUnavailableException("ProductInfoService")
 
 
 _retry = retry(
-    stop=stop_after_attempt(MAX_RETRIES),
-    wait=wait_exponential(multiplier=BASE_DELAY, max=MAX_DELAY),
-    retry=retry_if_exception_type((_RetryableStatus, httpx.ConnectError, httpx.TimeoutException)),
+    stop=stop_after_attempt(settings.client_max_retries),
+    wait=wait_exponential(multiplier=settings.client_base_delay, max=settings.client_max_delay),
+    retry=retry_if_exception_type((RetryableStatusException, httpx.ConnectError, httpx.TimeoutException)),
     before_sleep=before_sleep_log(logger, logging.WARNING),
     retry_error_callback=_on_give_up,
 )
@@ -57,14 +50,14 @@ class ProductInfoClient:
 
     @_retry
     async def _get(self, path: str) -> httpx.Response:
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=REQUEST_TIMEOUT) as client:
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=settings.client_request_timeout) as client:
             response = await client.get(path)
         self._check_retryable(response)
         return response
 
     @_retry
     async def _post(self, path: str, json: dict) -> httpx.Response:
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=REQUEST_TIMEOUT) as client:
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=settings.client_request_timeout) as client:
             response = await client.post(path, json=json)
         self._check_retryable(response)
         return response
@@ -73,4 +66,4 @@ class ProductInfoClient:
     def _check_retryable(response: httpx.Response) -> None:
         if response.status_code in RetryableStatus:
             logger.warning("Retryable status %s for %s %s", response.status_code, response.request.method, response.request.url)
-            raise _RetryableStatus(str(response.status_code))
+            raise RetryableStatusException(str(response.status_code))
