@@ -110,9 +110,12 @@ async def _final_check(
     except NotFoundException:
         await _update_status(category.id, CategoryStatus.CANCELLED, last_error=last_error)
         logger.warning("Category %s cancelled after max retries", category.id)
-    except Exception:
+    except RETRYABLE_EXCEPTIONS:
         await _update_status(category.id, CategoryStatus.FAILED, last_error=last_error)
         logger.error("Category %s failed after max retries", category.id)
+    except Exception as exc:
+        await _update_status(category.id, CategoryStatus.ERROR, last_error=str(exc))
+        logger.error("Category %s marked ERROR on final check: %s", category.id, exc)
 
 
 async def category_worker() -> None:

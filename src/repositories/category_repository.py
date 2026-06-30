@@ -35,6 +35,15 @@ class CategoryRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_id_for_update(self, category_id: UUID) -> CategoryModel | None:
+        result = await self.session.execute(
+            select(CategoryModel)
+            .options(selectinload(CategoryModel.products))
+            .where(CategoryModel.id == category_id, CategoryModel.is_deleted == False)
+            .with_for_update(skip_locked=True)
+        )
+        return result.scalar_one_or_none()
+
     async def create(self, category: CategoryModel) -> CategoryModel:
         self.session.add(category)
         await self.session.flush()

@@ -35,12 +35,12 @@ async def create_category(
 ) -> CategoryResponse:
     return await service.create_category(data)
 
-@router.put("/categories/{category_id}", response_model=EnrichedCategoryResponse)
+@router.put("/categories/{category_id}", response_model=CategoryResponse)
 async def update_category(
     category_id: UUID,
     data: CategoryUpdate,
     service: CategoryService = Depends(get_category_service),
-) -> EnrichedCategoryResponse:
+) -> CategoryResponse:
     return await service.update_category(category_id, data)
 
 @router.delete("/categories/{category_id}", status_code=HTTPStatus.NO_CONTENT)
