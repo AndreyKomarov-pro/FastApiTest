@@ -83,21 +83,10 @@ class CategoryService:
     async def create_category(self, data: CategoryCreate) -> CategoryResponse:
         logger.info("Creating category name=%s", data.body.name)
         idempotency_key = uuid4()
-        category = CategoryModel(
-            name=data.body.name,
-            description=data.body.description,
+        category = data.body.to_model(
             status=CategoryStatus.PENDING,
             idempotency_key=idempotency_key,
         )
-        category.products = [
-            ProductModel(
-                name=p.name,
-                description=p.description,
-                price=p.price,
-                quantity=p.quantity,
-            )
-            for p in data.body.products
-        ]
         result = await self.repo.create(category)
         payload = self._build_payload(result.products, idempotency_key)
         result.payload_json = json.dumps(payload)

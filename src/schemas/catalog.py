@@ -3,6 +3,8 @@ from decimal import Decimal
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from src.exceptions.validation import ValidationException
+from src.models.category import CategoryModel
+from src.models.product import ProductModel
 
 
 class ProductBody(BaseModel):
@@ -28,6 +30,14 @@ class ProductBody(BaseModel):
         if not stripped:
             raise ValidationException(field="description", message="Описание не может быть пустым")
         return stripped
+
+    def to_model(self) -> ProductModel:
+        return ProductModel(
+            name=self.name,
+            description=self.description,
+            price=self.price,
+            quantity=self.quantity,
+        )
 
 class CategoryBaseBody(BaseModel):
     name: str = Field(..., max_length=100)
@@ -61,6 +71,16 @@ class CategoryBody(CategoryBaseBody):
         if not v:
             raise ValidationException(field="products", message="Категория должна содержать хотя бы один товар")
         return v
+
+    def to_model(self, status: str, idempotency_key: UUID) -> CategoryModel:
+        category = CategoryModel(
+            name=self.name,
+            description=self.description,
+            status=status,
+            idempotency_key=idempotency_key,
+        )
+        category.products = [p.to_model() for p in self.products]
+        return category
 
 
 class CategoryUpdateBody(CategoryBaseBody):
