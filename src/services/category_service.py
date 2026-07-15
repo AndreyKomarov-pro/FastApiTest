@@ -95,7 +95,7 @@ class CategoryService:
 
     async def update_category(self, category_id: UUID, data: CategoryUpdate) -> CategoryResponse:
         logger.info("Updating category id=%s", category_id)
-        category = await self._get_category_orm_for_update(category_id)
+        category = await self._get_category_orm(category_id)
         self._update_fields(category, data.body)
         result = await self.repo.update(category)
         await self._invalidate_category_cache(category_id)
