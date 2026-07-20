@@ -1,0 +1,2 @@
+class RetryableStatusException(Exception):
+    pass

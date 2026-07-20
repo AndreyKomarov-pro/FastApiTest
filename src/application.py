@@ -1,9 +1,11 @@
+import asyncio
 import logging
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import UJSONResponse
+from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -16,8 +18,20 @@ from src.routers.catalog_router import router as catalog_router
 from src.routers.users_router import router as users_router
 from src.routers.orders_router import router as orders_router
 from src.schemas.log import RequestLogExtra
+from src.workers.category_worker import category_worker
 
 logger = logging.getLogger("app")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(category_worker())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 def _include_routers(app: FastAPI) -> None:
@@ -37,7 +51,8 @@ def get_app() -> FastAPI:
         title="Internet Shop API",
         docs_url="/docs",
         openapi_url="/openapi.json",
-        default_response_class=UJSONResponse,
+        default_response_class=JSONResponse,
+        lifespan=lifespan,
     )
 
     app.add_middleware(
