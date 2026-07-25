@@ -10,6 +10,7 @@ from src.models.user_profile import UserProfile
 from src.models.category import CategoryModel
 from src.models.product import ProductModel
 from src.repositories.orders_repository import OrdersRepository
+from src.repositories.outbox_repository import OutboxRepository
 from src.schemas.order import (
     OrderCreate,
     OrderBody,
@@ -23,7 +24,8 @@ from src.services.orders_service import OrdersService
 @pytest.fixture
 def orders_service(session, cache_service):
     repo = OrdersRepository(session)
-    return OrdersService(repo, cache_service)
+    outbox_repo = OutboxRepository(session)
+    return OrdersService(repo, cache_service, outbox_repo)
 
 
 @pytest.fixture

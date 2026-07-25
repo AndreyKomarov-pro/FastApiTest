@@ -1,24 +1,39 @@
 import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
 from src.cache.redis_client import RedisClient
+from src.config import Settings
+from src.enums.event_type import EventType
 from src.exceptions import NotFoundException
+from src.models.outbox_event import OutboxEventModel
 from src.models.user import UserModel
 from src.models.user_profile import UserProfile
+from src.repositories.outbox_repository import OutboxRepository
 from src.repositories.user_repository import UserRepository
+from src.schemas.event import EventEnvelope
 from src.schemas.user import UserCreate, UserUpdate, UserUpdateBody, UserResponse
 from src.schemas.pagination import PageResponse
 
 logger = logging.getLogger(__name__)
 
+settings = Settings()
+
 USERS_LIST_KEY = "users:page:{page}:size:{size}"
 USER_KEY = "user:{user_id}"
+AGGREGATE_TYPE = "user"
 
 
 class UsersService:
-    def __init__(self, repo: UserRepository, cache: RedisClient) -> None:
+    def __init__(
+        self,
+        repo: UserRepository,
+        cache: RedisClient,
+        outbox_repo: OutboxRepository,
+    ) -> None:
         self.repo = repo
         self.cache = cache
+        self.outbox_repo = outbox_repo
 
     async def _get_user_orm(self, user_id: UUID) -> UserModel:
         user = await self.repo.get_by_id_for_update(user_id)
@@ -55,6 +70,13 @@ class UsersService:
             bio=data.body.profile.bio,
         )
         result = await self.repo.create(user)
+
+        await self._publish_event(
+            event_type=EventType.USER_CREATED,
+            aggregate_id=result.id,
+            data=data.body.model_dump(mode="json"),
+        )
+
         await self.cache.delete_cached_pattern("users:*")
         return UserResponse.from_model(result)
 
@@ -63,6 +85,13 @@ class UsersService:
         user = await self._get_user_orm(user_id)
         self._apply_update(user, data.body)
         result = await self.repo.update(user)
+
+        await self._publish_event(
+            event_type=EventType.USER_UPDATED,
+            aggregate_id=user_id,
+            data=data.body.model_dump(mode="json", exclude_unset=True),
+        )
+
         await self.cache.delete_cached_pattern("users:*")
         await self.cache.delete_cached(USER_KEY.format(user_id=user_id))
         return UserResponse.from_model(result)
@@ -86,5 +115,35 @@ class UsersService:
         logger.info("Deleting user id=%s", user_id)
         user = await self._get_user_orm(user_id)
         await self.repo.delete(user)
+
+        await self._publish_event(
+            event_type=EventType.USER_DELETED,
+            aggregate_id=user_id,
+            data={"user_id": str(user_id)},
+        )
+
         await self.cache.delete_cached_pattern("users:*")
         await self.cache.delete_cached(USER_KEY.format(user_id=user_id))
+
+    async def _publish_event(
+        self,
+        event_type: EventType,
+        aggregate_id: UUID,
+        data: dict,
+    ) -> None:
+        envelope = EventEnvelope(
+            event_id=aggregate_id,
+            event_type=event_type,
+            aggregate_type=AGGREGATE_TYPE,
+            aggregate_id=aggregate_id,
+            timestamp=datetime.now(timezone.utc),
+            data=data,
+        )
+        outbox_event = OutboxEventModel(
+            aggregate_type=AGGREGATE_TYPE,
+            aggregate_id=aggregate_id,
+            event_type=event_type,
+            topic=settings.kafka_topic_users,
+            payload=envelope.model_dump_json(),
+        )
+        await self.outbox_repo.create(outbox_event)

@@ -4,6 +4,7 @@ import pytest
 
 from src.exceptions import NotFoundException
 from src.repositories.user_repository import UserRepository
+from src.repositories.outbox_repository import OutboxRepository
 from src.schemas.user import (
     UserCreate,
     UserBody,
@@ -18,7 +19,8 @@ from src.services.users_service import UsersService
 @pytest.fixture
 def users_service(session, cache_service):
     repo = UserRepository(session)
-    return UsersService(repo, cache_service)
+    outbox_repo = OutboxRepository(session)
+    return UsersService(repo, cache_service, outbox_repo)
 
 
 @pytest.fixture

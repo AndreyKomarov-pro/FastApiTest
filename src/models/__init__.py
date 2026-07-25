@@ -5,6 +5,7 @@ from .category import CategoryModel
 from .product import ProductModel
 from .order import OrderModel
 from .order_entry import OrderEntryModel
+from .outbox_event import OutboxEventModel
 
 __all__ = [
     "Base",
@@ -14,4 +15,5 @@ __all__ = [
     "ProductModel",
     "OrderModel",
     "OrderEntryModel",
+    "OutboxEventModel",
 ]
