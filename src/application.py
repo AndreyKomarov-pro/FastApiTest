@@ -21,6 +21,7 @@ from src.routers.orders_router import router as orders_router
 from src.schemas.log import RequestLogExtra
 from src.workers.category_worker import category_worker
 from src.workers.outbox_relay import outbox_relay
+from src.workers.kafka_consumer import consume_events
 
 logger = logging.getLogger("app")
 
@@ -32,12 +33,14 @@ async def lifespan(app: FastAPI):
 
     category_task = asyncio.create_task(category_worker())
     outbox_task = asyncio.create_task(outbox_relay(producer))
+    consumer_task = asyncio.create_task(consume_events(producer))
 
     yield
 
     category_task.cancel()
     outbox_task.cancel()
-    for task in [category_task, outbox_task]:
+    consumer_task.cancel()
+    for task in [category_task, outbox_task, consumer_task]:
         try:
             await task
         except asyncio.CancelledError:

@@ -6,6 +6,7 @@ from .product import ProductModel
 from .order import OrderModel
 from .order_entry import OrderEntryModel
 from .outbox_event import OutboxEventModel
+from .processed_event import ProcessedEventModel
 
 __all__ = [
     "Base",
@@ -16,4 +17,5 @@ __all__ = [
     "OrderModel",
     "OrderEntryModel",
     "OutboxEventModel",
+    "ProcessedEventModel",
 ]
