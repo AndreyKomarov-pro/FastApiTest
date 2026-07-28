@@ -24,7 +24,6 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_topic_orders: str = "orders"
     kafka_topic_users: str = "users"
-    kafka_topic_categories: str = "categories"
 
     outbox_poll_interval: int = 5
     outbox_batch_size: int = 50

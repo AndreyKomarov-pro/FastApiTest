@@ -7,7 +7,6 @@ import pytest
 from src.enums.category_status import CategoryStatus
 from src.exceptions import NotFoundException
 from src.repositories.category_repository import CategoryRepository
-from src.repositories.outbox_repository import OutboxRepository
 from src.schemas.catalog import CategoryCreate, CategoryBody, CategoryUpdate, CategoryUpdateBody, ProductBody
 from src.schemas.product_info import ProductInfoResponse
 from src.services.category_service import CategoryService
@@ -16,8 +15,7 @@ from src.services.category_service import CategoryService
 @pytest.fixture
 def category_service(session, cache_service, mock_product_info_client):
     repo = CategoryRepository(session)
-    outbox_repo = OutboxRepository(session)
-    return CategoryService(repo, cache_service, mock_product_info_client, outbox_repo)
+    return CategoryService(repo, cache_service, mock_product_info_client)
 
 
 @pytest.fixture

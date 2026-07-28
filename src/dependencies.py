@@ -26,9 +26,7 @@ def get_category_service(
     cache: RedisClient = Depends(get_redis_client),
     product_info_client: ProductInfoClient = Depends(get_product_info_client),
 ) -> CategoryService:
-    return CategoryService(
-        CategoryRepository(session), cache, product_info_client, OutboxRepository(session),
-    )
+    return CategoryService(CategoryRepository(session), cache, product_info_client)
 
 
 def get_users_service(
