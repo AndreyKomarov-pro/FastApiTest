@@ -3,9 +3,9 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from src.cache.redis_client import RedisClient
-from src.config import Settings
-from src.enums.event_type import EventType
+from src.config import settings
 from src.exceptions import NotFoundException
+from src.models.enums.event_type import EventType
 from src.models.outbox_event import OutboxEventModel
 from src.models.user import UserModel
 from src.models.user_profile import UserProfile
@@ -16,8 +16,6 @@ from src.schemas.user import UserCreate, UserUpdate, UserUpdateBody, UserRespons
 from src.schemas.pagination import PageResponse
 
 logger = logging.getLogger(__name__)
-
-settings = Settings()
 
 USERS_LIST_KEY = "users:page:{page}:size:{size}"
 USER_KEY = "user:{user_id}"
@@ -72,7 +70,7 @@ class UsersService:
         result = await self.repo.create(user)
 
         await self._publish_event(
-            event_type=EventType.USER_CREATED,
+            event_type=EventType.CREATED,
             aggregate_id=result.id,
             data=data.body.model_dump(mode="json"),
         )
@@ -87,7 +85,7 @@ class UsersService:
         result = await self.repo.update(user)
 
         await self._publish_event(
-            event_type=EventType.USER_UPDATED,
+            event_type=EventType.UPDATED,
             aggregate_id=user_id,
             data=data.body.model_dump(mode="json", exclude_unset=True),
         )
@@ -117,7 +115,7 @@ class UsersService:
         await self.repo.delete(user)
 
         await self._publish_event(
-            event_type=EventType.USER_DELETED,
+            event_type=EventType.DELETED,
             aggregate_id=user_id,
             data={"user_id": str(user_id)},
         )

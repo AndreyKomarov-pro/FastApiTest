@@ -40,4 +40,4 @@ def get_orders_service(
     session: AsyncSession = Depends(get_db),
     cache: RedisClient = Depends(get_redis_client),
 ) -> OrdersService:
-    return OrdersService(OrdersRepository(session), cache, OutboxRepository(session))
+    return OrdersService(OrdersRepository(session), cache)

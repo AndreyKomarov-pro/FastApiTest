@@ -1,12 +1,11 @@
+import asyncio
 import logging
 
 from aiokafka import AIOKafkaProducer
 
-from src.config import Settings
+from src.config import settings
 
 logger = logging.getLogger(__name__)
-
-settings = Settings()
 
 
 class KafkaProducer:
@@ -29,5 +28,8 @@ class KafkaProducer:
             await self._producer.stop()
             logger.info("Kafka producer stopped")
 
-    async def send(self, topic: str, key: str, value: str) -> None:
-        await self._producer.send_and_wait(topic, value=value, key=key)
+    async def send(self, topic: str, key: str, value: str) -> asyncio.Future:
+        return await self._producer.send(topic, value=value, key=key)
+
+    async def flush(self) -> None:
+        await self._producer.flush()
