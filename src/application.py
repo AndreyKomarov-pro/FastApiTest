@@ -13,7 +13,7 @@ from starlette.responses import Response
 from src.exceptions import AppException
 from src.exceptions.handler import app_exception_handler, validation_exception_handler
 from src.exceptions.validation import ValidationException
-from src.kafka.producer import KafkaProducer
+from src.clients.kafka_producer import KafkaProducer
 from src.routers.healthcheck_router import router as healthcheck_router
 from src.routers.catalog_router import router as catalog_router
 from src.routers.users_router import router as users_router
