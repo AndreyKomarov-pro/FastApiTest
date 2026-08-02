@@ -1,4 +1,7 @@
 import os
+
+os.environ.setdefault("POSTGRES_URL", "postgresql+asyncpg://test:test@localhost:5432/test")
+
 import subprocess
 from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock
