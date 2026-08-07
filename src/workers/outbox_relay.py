@@ -2,8 +2,6 @@ import asyncio
 import json
 import logging
 
-from aiokafka.errors import KafkaError
-
 from src.config import settings
 from src.database import SessionFactory
 from src.clients.kafka_producer import KafkaProducer
@@ -37,7 +35,7 @@ async def outbox_relay(producer: KafkaProducer) -> None:
                             )
                             await repo.mark_sent(event.id)
                             logger.info("Sent event %s to %s", event.id, event.topic)
-                        except KafkaError as exc:
+                        except Exception as exc:
                             logger.error("Failed to send event %s: %s", event.id, exc)
                             is_final = await repo.record_failure(
                                 event.id, settings.outbox_max_retries,
