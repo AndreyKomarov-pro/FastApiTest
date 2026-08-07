@@ -74,7 +74,6 @@ class UsersService:
             data=data.body.model_dump(mode="json"),
         )
 
-        await self.cache.delete_cached_pattern("users:*")
         return UserResponse.from_model(result)
 
     async def update_user(self, user_id: UUID, data: UserUpdate) -> UserResponse:

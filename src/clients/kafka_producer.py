@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from aiokafka import AIOKafkaProducer
@@ -13,6 +12,8 @@ class KafkaProducer:
         self._producer: AIOKafkaProducer | None = None
 
     async def start(self) -> None:
+        if self._producer is not None:
+            return
         self._producer = AIOKafkaProducer(
             bootstrap_servers=settings.kafka_bootstrap_servers,
             enable_idempotence=True,
@@ -26,10 +27,8 @@ class KafkaProducer:
     async def stop(self) -> None:
         if self._producer:
             await self._producer.stop()
+            self._producer = None
             logger.info("Kafka producer stopped")
 
-    async def send(self, topic: str, key: str, value: str) -> asyncio.Future:
-        return await self._producer.send(topic, value=value, key=key)
-
-    async def flush(self) -> None:
-        await self._producer.flush()
+    async def send(self, topic: str, key: str, value: str) -> None:
+        await self._producer.send_and_wait(topic, value=value, key=key)

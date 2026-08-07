@@ -26,47 +26,28 @@ async def outbox_relay(producer: KafkaProducer) -> None:
                 await session.commit()
 
             if events:
-                futures = []
-                for event in events:
-                    try:
-                        fut = await producer.send(
-                            topic=event.topic,
-                            key=str(event.aggregate_id),
-                            value=event.payload,
-                        )
-                        futures.append((event, fut))
-                    except KafkaError as exc:
-                        logger.error("Failed to queue event %s: %s", event.id, exc)
-                        futures.append((event, exc))
-
-                await producer.flush()
-
                 async with SessionFactory() as session:
                     repo = OutboxRepository(session)
-                    for event, result in futures:
-                        error_msg = None
-                        if isinstance(result, KafkaError):
-                            error_msg = str(result)
-                        else:
-                            try:
-                                result.result()
-                                await repo.mark_sent(event.id)
-                                logger.info("Sent event %s to %s", event.id, event.topic)
-                                continue
-                            except KafkaError as exc:
-                                error_msg = str(exc)
-                                logger.error("Failed to send event %s: %s", event.id, exc)
-
-                        is_final = await repo.record_failure(
-                            event.id, settings.outbox_max_retries,
-                        )
-                        if is_final:
-                            await _send_to_dlq(producer, event, error_msg)
-
+                    for event in events:
+                        try:
+                            await producer.send(
+                                topic=event.topic,
+                                key=str(event.aggregate_id),
+                                value=event.payload,
+                            )
+                            await repo.mark_sent(event.id)
+                            logger.info("Sent event %s to %s", event.id, event.topic)
+                        except KafkaError as exc:
+                            logger.error("Failed to send event %s: %s", event.id, exc)
+                            is_final = await repo.record_failure(
+                                event.id, settings.outbox_max_retries,
+                            )
+                            if is_final:
+                                await _send_to_dlq(producer, event, str(exc))
                     await session.commit()
 
-        except KafkaError as exc:
-            logger.error("Outbox relay kafka error: %s", exc)
+        except Exception as exc:
+            logger.exception("Outbox relay error: %s", exc)
 
         await asyncio.sleep(settings.outbox_poll_interval)
 
@@ -83,13 +64,9 @@ async def _send_to_dlq(
         "error": error_msg,
         "attempts": event.attempts,
     })
-    try:
-        await producer.send(
-            topic=settings.kafka_topic_dlq,
-            key=str(event.aggregate_id),
-            value=dlq_payload,
-        )
-        await producer.flush()
-        logger.warning("Event %s sent to DLQ", event.id)
-    except KafkaError as exc:
-        logger.error("Failed to send event %s to DLQ: %s", event.id, exc)
+    await producer.send(
+        topic=settings.kafka_topic_dlq,
+        key=str(event.aggregate_id),
+        value=dlq_payload,
+    )
+    logger.warning("Event %s sent to DLQ", event.id)
