@@ -81,7 +81,6 @@ class UsersService:
         user = await self._get_user_orm(user_id)
         self._apply_update(user, data.body)
         result = await self.repo.update(user)
-        await self.cache.delete_cached_pattern("users:*")
         await self.cache.delete_cached(USER_KEY.format(user_id=user_id))
         return UserResponse.from_model(result)
 
