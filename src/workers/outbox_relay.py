@@ -5,6 +5,7 @@ import logging
 from src.config import settings
 from src.database import SessionFactory
 from src.clients.kafka_producer import KafkaProducer
+from src.models.outbox_event import OutboxEventModel
 from src.repositories.outbox_repository import OutboxRepository
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ async def outbox_relay(producer: KafkaProducer) -> None:
 
 
 async def _send_to_dlq(
-    producer: KafkaProducer, event, error_msg: str | None,
+    producer: KafkaProducer, event: OutboxEventModel, error_msg: str | None,
 ) -> None:
     dlq_payload = json.dumps({
         "original_topic": event.topic,
