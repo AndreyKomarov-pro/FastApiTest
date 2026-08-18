@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from aiokafka import AIOKafkaProducer
@@ -10,19 +11,21 @@ logger = logging.getLogger(__name__)
 class KafkaProducer:
     def __init__(self) -> None:
         self._producer: AIOKafkaProducer | None = None
+        self._lock = asyncio.Lock()
 
     async def start(self) -> None:
-        if self._producer is not None:
-            return
-        self._producer = AIOKafkaProducer(
-            bootstrap_servers=settings.kafka_bootstrap_servers,
-            enable_idempotence=True,
-            acks="all",
-            value_serializer=lambda v: v.encode("utf-8"),
-            key_serializer=lambda k: k.encode("utf-8") if k else None,
-        )
-        await self._producer.start()
-        logger.info("Kafka producer started")
+        async with self._lock:
+            if self._producer is not None:
+                return
+            self._producer = AIOKafkaProducer(
+                bootstrap_servers=settings.kafka_bootstrap_servers,
+                enable_idempotence=True,
+                acks="all",
+                value_serializer=lambda v: v.encode("utf-8"),
+                key_serializer=lambda k: k.encode("utf-8") if k else None,
+            )
+            await self._producer.start()
+            logger.info("Kafka producer started")
 
     async def stop(self) -> None:
         if self._producer:

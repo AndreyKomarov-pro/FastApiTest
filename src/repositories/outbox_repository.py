@@ -28,7 +28,13 @@ class OutboxRepository:
             select(OutboxEventModel)
             .where(
                 sa.or_(
-                    OutboxEventModel.status == OutboxStatus.PENDING,
+                    sa.and_(
+                        OutboxEventModel.status == OutboxStatus.PENDING,
+                        sa.or_(
+                            OutboxEventModel.next_retry_at.is_(None),
+                            OutboxEventModel.next_retry_at <= now,
+                        ),
+                    ),
                     sa.and_(
                         OutboxEventModel.status == OutboxStatus.PROCESSING,
                         OutboxEventModel.last_attempt_at < stale_threshold,
@@ -59,15 +65,40 @@ class OutboxRepository:
         )
         await self.session.execute(stmt)
 
-    async def record_failure(self, event_id: UUID, max_retries: int) -> bool:
+    async def record_failure(
+        self,
+        event_id: UUID,
+        max_retries: int,
+        base_backoff: int,
+        max_backoff: int,
+    ) -> bool:
+        delay = sa.func.least(
+            base_backoff * sa.func.power(2, OutboxEventModel.attempts),
+            max_backoff,
+        )
+        next_retry = (
+            sa.func.now()
+            + delay * sa.literal_column("INTERVAL '1 second'")
+        )
+
         stmt = (
             update(OutboxEventModel)
             .where(OutboxEventModel.id == event_id)
             .values(
                 attempts=OutboxEventModel.attempts + 1,
                 last_attempt_at=datetime.now(timezone.utc),
+                next_retry_at=case(
+                    (
+                        OutboxEventModel.attempts + 1 >= max_retries,
+                        sa.null(),
+                    ),
+                    else_=next_retry,
+                ),
                 status=case(
-                    (OutboxEventModel.attempts + 1 >= max_retries, OutboxStatus.FAILED),
+                    (
+                        OutboxEventModel.attempts + 1 >= max_retries,
+                        OutboxStatus.FAILED,
+                    ),
                     else_=OutboxStatus.PENDING,
                 ),
             )

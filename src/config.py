@@ -23,12 +23,13 @@ class Settings(BaseSettings):
 
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_topic_users: str = "users"
-    kafka_topic_dlq: str = "dlq"
 
     outbox_poll_interval: int = 5
     outbox_batch_size: int = 50
     outbox_max_retries: int = 5
     outbox_processing_timeout: int = 300
+    outbox_base_backoff: int = 5
+    outbox_max_backoff: int = 300
 
     class Config:
         env_file = os.path.join(

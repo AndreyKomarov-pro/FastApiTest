@@ -25,6 +25,13 @@ from src.workers.outbox_relay import outbox_relay
 logger = logging.getLogger("app")
 
 
+def _on_task_done(task: asyncio.Task) -> None:
+    if task.cancelled():
+        return
+    if exc := task.exception():
+        logger.critical("Background task %s died: %s", task.get_name(), exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     producer = KafkaProducer()
@@ -33,17 +40,21 @@ async def lifespan(app: FastAPI):
     category_task = asyncio.create_task(category_worker())
     outbox_task = asyncio.create_task(outbox_relay(producer))
 
-    yield
-
-    category_task.cancel()
-    outbox_task.cancel()
     for task in [category_task, outbox_task]:
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        task.add_done_callback(_on_task_done)
 
-    await producer.stop()
+    try:
+        yield
+    finally:
+        category_task.cancel()
+        outbox_task.cancel()
+        for task in [category_task, outbox_task]:
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        await producer.stop()
 
 
 def _include_routers(app: FastAPI) -> None:

@@ -26,6 +26,9 @@ class OutboxEventModel(Base):
     last_attempt_at: Mapped[datetime | None] = mapped_column(
         sa.DateTime(timezone=True), nullable=True,
     )
+    next_retry_at: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True,
+    )
     sent_at: Mapped[datetime | None] = mapped_column(
         sa.DateTime(timezone=True), nullable=True,
     )
