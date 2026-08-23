@@ -34,4 +34,6 @@ class KafkaProducer:
             logger.info("Kafka producer stopped")
 
     async def send(self, topic: str, key: str, value: str) -> None:
+        if self._producer is None:
+            raise RuntimeError("KafkaProducer is not started")
         await self._producer.send_and_wait(topic, value=value, key=key)

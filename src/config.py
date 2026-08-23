@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     outbox_poll_interval: int = 5
     outbox_batch_size: int = 50
+    outbox_concurrency: int = 10
     outbox_max_retries: int = 5
     outbox_processing_timeout: int = 300
     outbox_base_backoff: int = 5

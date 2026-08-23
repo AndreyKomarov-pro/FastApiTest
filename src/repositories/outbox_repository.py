@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta, timezone
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import sqlalchemy as sa
-from sqlalchemy import select, update, case
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.enums.outbox_status import OutboxStatus
 from src.models.outbox_event import OutboxEventModel
+from src.schemas.outbox import OutboxEventToSend
 
 
 class OutboxRepository:
@@ -20,7 +21,7 @@ class OutboxRepository:
 
     async def claim_pending(
         self, batch_size: int, processing_timeout: int,
-    ) -> list[OutboxEventModel]:
+    ) -> list[OutboxEventToSend]:
         now = datetime.now(timezone.utc)
         stale_threshold = now - timedelta(seconds=processing_timeout)
 
@@ -51,59 +52,47 @@ class OutboxRepository:
         for event in events:
             event.status = OutboxStatus.PROCESSING
             event.last_attempt_at = now
+            event.processing_id = uuid4()
 
-        return events
+        await self.session.flush()
 
-    async def mark_sent(self, event_id: UUID) -> None:
+        return OutboxEventToSend.from_list(events)
+
+    async def mark_sent(self, event_id: UUID, processing_id: UUID) -> bool:
         stmt = (
             update(OutboxEventModel)
-            .where(OutboxEventModel.id == event_id)
+            .where(
+                OutboxEventModel.id == event_id,
+                OutboxEventModel.processing_id == processing_id,
+            )
             .values(
                 status=OutboxStatus.SENT,
                 sent_at=datetime.now(timezone.utc),
             )
         )
-        await self.session.execute(stmt)
+        result = await self.session.execute(stmt)
+        return result.rowcount > 0
 
     async def record_failure(
         self,
         event_id: UUID,
-        max_retries: int,
-        base_backoff: int,
-        max_backoff: int,
+        processing_id: UUID,
+        status: OutboxStatus,
+        next_retry_at: datetime | None,
     ) -> bool:
-        delay = sa.func.least(
-            base_backoff * sa.func.power(2, OutboxEventModel.attempts),
-            max_backoff,
-        )
-        next_retry = (
-            sa.func.now()
-            + delay * sa.literal_column("INTERVAL '1 second'")
-        )
-
         stmt = (
             update(OutboxEventModel)
-            .where(OutboxEventModel.id == event_id)
+            .where(
+                OutboxEventModel.id == event_id,
+                OutboxEventModel.processing_id == processing_id,
+            )
             .values(
                 attempts=OutboxEventModel.attempts + 1,
                 last_attempt_at=datetime.now(timezone.utc),
-                next_retry_at=case(
-                    (
-                        OutboxEventModel.attempts + 1 >= max_retries,
-                        sa.null(),
-                    ),
-                    else_=next_retry,
-                ),
-                status=case(
-                    (
-                        OutboxEventModel.attempts + 1 >= max_retries,
-                        OutboxStatus.FAILED,
-                    ),
-                    else_=OutboxStatus.PENDING,
-                ),
+                processing_id=sa.null(),
+                status=status,
+                next_retry_at=next_retry_at,
             )
-            .returning(OutboxEventModel.attempts)
         )
         result = await self.session.execute(stmt)
-        new_attempts = result.scalar_one()
-        return new_attempts >= max_retries
+        return result.rowcount > 0
