@@ -17,23 +17,28 @@ class KafkaProducer:
         async with self._lock:
             if self._producer is not None:
                 return
-            self._producer = AIOKafkaProducer(
+            producer = AIOKafkaProducer(
                 bootstrap_servers=settings.kafka_bootstrap_servers,
                 enable_idempotence=True,
                 acks="all",
                 value_serializer=lambda v: v.encode("utf-8"),
                 key_serializer=lambda k: k.encode("utf-8") if k else None,
             )
-            await self._producer.start()
+            await producer.start()
+            self._producer = producer
             logger.info("Kafka producer started")
 
     async def stop(self) -> None:
-        if self._producer:
-            await self._producer.stop()
+        async with self._lock:
+            if self._producer is None:
+                return
+            producer = self._producer
             self._producer = None
+            await producer.stop()
             logger.info("Kafka producer stopped")
 
     async def send(self, topic: str, key: str, value: str) -> None:
-        if self._producer is None:
+        producer = self._producer
+        if producer is None:
             raise RuntimeError("KafkaProducer is not started")
-        await self._producer.send_and_wait(topic, value=value, key=key)
+        await producer.send_and_wait(topic, value=value, key=key)
