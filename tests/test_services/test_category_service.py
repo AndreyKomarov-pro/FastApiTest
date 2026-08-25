@@ -101,7 +101,7 @@ async def test_get_category_by_id_returns_cached(category_service, category_data
     mock_product_info_client.get_product_info.assert_called_once()
 
 
-async def test_update_sets_cache(category_service, category_data, mock_product_info_client, product_info_response):
+async def test_update_invalidates_cache(category_service, category_data, mock_product_info_client, product_info_response):
     mock_product_info_client.get_product_info.return_value = product_info_response
     created = await category_service.create_category(category_data)
     await category_service.get_category_by_id(created.id)
@@ -112,4 +112,4 @@ async def test_update_sets_cache(category_service, category_data, mock_product_i
     assert result.name == "New Name"
     cached_result = await category_service.get_category_by_id(created.id)
     assert cached_result.name == "New Name"
-    mock_product_info_client.get_product_info.assert_not_called()
+    mock_product_info_client.get_product_info.assert_called_once()
