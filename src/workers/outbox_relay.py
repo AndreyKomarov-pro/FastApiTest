@@ -1,8 +1,6 @@
 import asyncio
 import logging
 
-from aiokafka.errors import KafkaError
-
 from src.config import settings
 from src.database import SessionFactory
 from src.infrastructure.kafka.producer import KafkaProducer
@@ -50,8 +48,8 @@ async def _send_event(
                 key=str(event.aggregate_id),
                 value=event.payload,
             )
-        except KafkaError as exc:
-            logger.error("Failed to send event %s: %s", event.id, exc)
+        except Exception as exc:
+            logger.exception("Failed to send event %s: %s", event.id, exc)
             await _record_failure(event)
             return
 
