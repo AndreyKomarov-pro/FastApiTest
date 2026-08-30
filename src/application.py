@@ -13,25 +13,48 @@ from starlette.responses import Response
 from src.exceptions import AppException
 from src.exceptions.handler import app_exception_handler, validation_exception_handler
 from src.exceptions.validation import ValidationException
+from src.infrastructure.kafka.producer import KafkaProducer
 from src.routers.healthcheck_router import router as healthcheck_router
 from src.routers.catalog_router import router as catalog_router
 from src.routers.users_router import router as users_router
 from src.routers.orders_router import router as orders_router
 from src.schemas.log import RequestLogExtra
 from src.workers.category_worker import category_worker
+from src.workers.outbox_relay import outbox_relay
 
 logger = logging.getLogger("app")
 
 
+def _on_task_done(task: asyncio.Task) -> None:
+    if task.cancelled():
+        return
+    if exc := task.exception():
+        logger.critical("Background task %s died: %s", task.get_name(), exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(category_worker())
-    yield
-    task.cancel()
+    producer = KafkaProducer()
+    await producer.start()
+
+    category_task = asyncio.create_task(category_worker())
+    outbox_task = asyncio.create_task(outbox_relay(producer))
+
+    for task in [category_task, outbox_task]:
+        task.add_done_callback(_on_task_done)
+
     try:
-        await task
-    except asyncio.CancelledError:
-        pass
+        yield
+    finally:
+        category_task.cancel()
+        outbox_task.cancel()
+        for task in [category_task, outbox_task]:
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        await producer.stop()
 
 
 def _include_routers(app: FastAPI) -> None:
